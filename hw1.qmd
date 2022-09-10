@@ -20,9 +20,11 @@ Examine whether the following statements are true or false and provide one line 
 
 \(a\) The data collection process usually has little-to-no influence on the outcome of a predictive modeling problem.
 
-**FALSE.** It has a huge influence! If you wanted to estimate the number of voters supporting Democrats in the next election and only sampled people at a Republican convention, you would have very unreliable results.
+**FALSE.** It has a huge influence! If you wanted to estimate the number of voters supporting Democrats in the next election and only sampled people at a Republican convention, you wolambdauld have very unreliable results.
 
-\(b\) Eigenvalues obtained from principal component analysis are always nonnegative.
+\(b\) Eigenvalues obtained from principal component analysis are always non-negative.
+
+**TRUE.** From the lecture, since we're performing the eigendecomposition on the sample covariance matrix, and the eigenvalues of that represent the variance of the components.
 
 \(c\) The first principal vector and the second principal vector are always orthogonal.
 
@@ -32,9 +34,9 @@ Examine whether the following statements are true or false and provide one line 
 
 **FALSE.** They are the square roots of the non-zero eigenvalues of $M^TM$ or $MM^T$. (Source: textbook and question #2 of this homework).
 
-\(e\) Principal component analysis can be used to create a low dimensional projection of the
+\(e\) Principal component analysis can be used to create a low dimensional projection of the data.
 
-data.
+**MAYBE.** Definitely reducing dimension, I'm not sure if that's projecting at the same time.
 
 \(f\) Eigenvalues of a matrix are always non-negative.
 
@@ -51,7 +53,98 @@ cluster center are always orthogonal.
 
 # 2 SVD
 
+**(a) Show that...**
+
+$$
+M = UDV^T = UD
+\begin{bmatrix} 
+-v_1^T- \\ 
+\vdots \\ 
+-v_n^T -
+\end{bmatrix}
+= U
+\begin{bmatrix} 
+-d_1 v_1^T- \\ 
+\vdots \\ 
+-d_n v_n^T-
+\end{bmatrix} 
+=
+\begin{bmatrix}
+u_1 u_2 \ldots u_n
+\end{bmatrix}
+\begin{bmatrix} 
+-d_1 v_1^T- \\ 
+\vdots \\ 
+-d_n v_n^T-
+\end{bmatrix} 
+= 
+\text{using column x row multiplication}
+= \sum_{i=1}^{n} u_i d_i v_i^T
+$$
+
+**(b) For** $1 ≤ i ≤ n$**, show that..**
+
+p\. 377 strang
+
+**(c) Generate a random matrix M of size n×n for n...**
+
+```{r}
+sizes = c(2,4,6,8,16,32,64,128,256,512,1024,2048)
+creation_time = c()
+svd_time = c()
+
+# used resource here for computing time differences: https://www.geeksforgeeks.org/how-to-subtract-time-in-r/
+
+for (i in sizes) {
+  
+  start_time <- Sys.time()
+  M = matrix(data=1,nrow=i,ncol=i)
+  end_time <- Sys.time()
+  
+  start_svd <- Sys.time()
+  svd(M)
+  end_svd <- Sys.time()
+  
+  creation_diff = as.double(difftime(end_time,start_time,Sys.time()))
+  creation_time = append(creation_time,creation_diff) # bad practice to loop like this? 
+  
+  svd_diff = as.double(difftime(end_svd,start_svd,Sys.time()))
+  svd_time = append(svd_time,svd_diff) 
+  
+}
+
+plot(sizes,creation_time,main="matrix of size n x n vs. time to create (in seconds)")
+plot(sizes,svd_time, main="matrix of size n x n vs. time to perform svd (in seconds)")
+```
+
 # 3 Power Method
+
+```{r}
+test = matrix(c(1,2,3,2,-1,4,3,4,-5), nrow=3, ncol = 3, byrow = TRUE)
+
+
+power <- function(A) {
+
+  # arbitrary starting vector 
+  w0 = matrix(A[,1])
+  
+  #loop here 
+  
+  n = 200 #number of times to loop? 
+  wk = A %*% w0 #intialize 
+  
+  for (i in seq(1,n))
+    wk = A %*% wk
+    sk1 = max(abs(wk))
+    print(wk/sk1)
+}
+
+power(test)
+```
+
+```{r}
+eigen(test)
+```
 
 # 4 PCA
 
@@ -101,14 +194,12 @@ dimnames(pca_model$rotation)
 
 **(e) Obtain the principal vectors and store them in a matrix, include row and column names. Display the first three loadings.**
 
-DOUBLE CHECK WHETHER OR NOT WE WANT ROWS OR COLUMNS. I think rows contain the "loadings" and the loading vectors contain all the loadings, thus want 3 rows.
-
 ```{r}
 # each column below contains the loading vectors 
-row_name = c("Murder","Assault","UrbanPop","Rape")  
-col_name = c("PC1","PC2","PC3","PC4")
-loading_matrix = matrix(pca_model$rotation, 4,4, dimnames=list(row_name,col_name))
+loading_matrix = pca_model$rotation 
+cat("Confirming that this is a matrix: ", class(loading_matrix),"\n")
 loading_matrix[1:3,]
+
 ```
 
 **(f) Obtain the principal components (or scores) and store them in a matrix, include row and column names. Display the first three PCs.**
