@@ -1,6 +1,6 @@
 ---
 title: "HW1"
-format: html
+format: pdf
 editor: visual
 ---
 
@@ -9,19 +9,13 @@ library(ggplot2)
 library(ggrepel)
 ```
 
-### helpful links:
-
-https://arxiv.org/pdf/1404.1100.pdf (PCA example)
-
-ISL 12.5 p. 538
-
 # 1 True or false
 
 Examine whether the following statements are true or false and provide one line justification.
 
 \(a\) The data collection process usually has little-to-no influence on the outcome of a predictive modeling problem.
 
-**FALSE.** It has a huge influence! If you wanted to estimate the number of voters supporting Democrats in the next election and only sampled people at a Republican convention, you wolambdauld have very unreliable results.
+**FALSE.** It has a huge influence. If you wanted to estimate the number of voters supporting Democrats in the next election and only sampled people at a Republican convention, you wolambdauld have very unreliable results.
 
 \(b\) Eigenvalues obtained from principal component analysis are always non-negative.
 
@@ -57,6 +51,7 @@ cluster center are always orthogonal.
 **(a) Show that...**
 
 $$
+\begin{aligned}
 M = UDV^T = UD
 \begin{bmatrix} 
 -v_1^T- \\ 
@@ -69,10 +64,7 @@ M = UDV^T = UD
 \vdots \\ 
 -d_n v_n^T-
 \end{bmatrix} 
-=
-$$
-
-$$
+\\
 \begin{bmatrix}
 u_1 u_2 \ldots u_n
 \end{bmatrix}
@@ -84,11 +76,30 @@ u_1 u_2 \ldots u_n
 = 
 \text{using column x row multiplication}
 = \sum_{i=1}^{n} u_i d_i v_i^T
+\end{aligned}
 $$
 
 **(b) For** $1 ≤ i ≤ n$**, show that..**
 
-p\. 377 strang
+$$
+\begin{aligned}
+& M = UDV^T \\
+& M^TM = (UDV^T)^T(UDV^T) \\
+& M^TM = VDU^TUDV^T = VD^2V^T 
+\end{aligned}
+$$
+
+Above, since D is diagonal $D^T = D$ and since U is orthogonal, $U^TU = I$ . Then, this is equivalent to the eigendecomposition of $M^TM$ so each column of $V$ corresponds to the $i^{th}$ eigenvalue and each entry of $D^2$ is the squared $i^{th}$ singular value, which is just the eigenvalue corresponding to the eigenvector.
+
+$$
+\begin{aligned}
+& M = UDV^T \\ 
+& MM^T = UDV^T(UDV^T)^T \\
+& MM^T = UDV^TVDU^T = UD^2U^T
+\end{aligned}
+$$
+
+The reasoning here is exactly the same as above. However, $MM^T$ will be an m x m matrix as opposed to $M^TM$ which will be n x n. Though I'm not clear if there are consequences or issues with this.
 
 **(c) Generate a random matrix M of size n×n for n...**
 
@@ -128,24 +139,30 @@ plot(sizes,svd_time, main="matrix of size n x n vs. time to perform svd (in seco
 ```{r}
 test = matrix(c(1,2,3,2,-1,4,3,4,-5), nrow=3, ncol = 3, byrow = TRUE)
 
-
-power <- function(A) {
+power <- function(A,iterations=20) {
 
   # arbitrary starting vector 
-  w0 = matrix(A[,1])
+  wk = matrix(A[,1])
   
-  #loop here 
+  for (i in seq(1,iterations))
+  {
+    wk_1 = A %*% wk
   
-  n = 200 #number of times to loop? 
-  wk = A %*% w0 #intialize 
+    wk_norm = norm(wk_1,"2")
   
-  for (i in seq(1,n))
-    wk = A %*% wk
-    sk1 = max(abs(wk))
-    wk/sk1
+    wk = wk_1 / wk_norm
+  }
+  
+  vector = wk
+  value = wk_norm
+
+  output = list(vector, value)
+  names(output) = c("Eigenvector","Eigenvalue")
+  output
+  
 }
 
-power(test)
+power(test) 
 ```
 
 ```{r}
@@ -156,12 +173,29 @@ eigen(test)
 
 ```{r}
 B = matrix(c(5,1,0,1,4,0,0,0,1), nrow=3, ncol = 3, byrow = TRUE)
-power(B)
 eigen(B)
 ```
 
+Deflating matrix:
+
 ```{r}
 
+#power method on B
+result_B = power(B)
+
+B_1 = B - (result_B$Eigenvalue * (result_B$Eigenvector %*% t(result_B$Eigenvector)))
+
+# power method on B1
+result_B_1 = power(B_1)
+
+B_2 = B_1 - (result_B_1$Eigenvalue * (result_B_1$Eigenvector %*% t(result_B_1$Eigenvector)))
+
+# power method on B2
+result_B_2 = power(B_2)
+
+eigen_approximation = list(result_B,result_B_1,result_B_2)
+names(eigen_approximation) = c("first eigval / vec pair","second eigval / vec pair","third eigval / vec pair")
+eigen_approximation
 ```
 
 # 4 PCA
@@ -199,28 +233,48 @@ ggplot(USArrests, aes(x=UrbanPop,y=Assault)) + geom_point()
 **(d) Use prcomp() function to perform principal component analysis. Make sure you standardized the data matrix. Print a summary at the end.**
 
 ```{r}
-#?prcomp()
+
 pca_model = prcomp(USArrests,scale = TRUE)
 
 #summary 
+#loadings = pca_model$rotation
+#scores= pca_model$sccores 
+summary(pca_model) 
+```
+
+# QUESTIONS
+
+-   what below corresponds to $Z_1 = \phi_{11}X_1 + ... + \phi_{p1}Xp$
+
+    -   first PC is a lin comb of p original variables
+
+```{r}
+# columns here are loadings
 pca_model
 ```
 
 **(e) Obtain the principal vectors and store them in a matrix, include row and column names. Display the first three loadings.**
 
+negative PC1: state with a lot of murders moves to left of PC1. Higher values of variable associated with lower values of first PC.
+
+PC2: states with higher murders / assaults will be in top part of biplot.
+
 ```{r}
+
 # each column below contains the loading vectors 
+# each entry is a loading 
+
+
 loading_matrix = pca_model$rotation 
 cat("Confirming that this is a matrix: ", class(loading_matrix),"\n")
-loading_matrix[1:3,]
-
+loading_matrix[1:4,]
 ```
 
 **(f) Obtain the principal components (or scores) and store them in a matrix, include row and column names. Display the first three PCs.**
 
 ```{r}
-#this may be a matrix, might need to remove matrix function on (e)
-# pretty sure class(loading_matrix) gives matrix so maybe redo that
+# These points are projectings onto space spanned by loadings? 
+# Is there a projection matrix or? (V matrix, if you keep first two columns of V)
 scores = pca_model$x 
 scores = scores[1:3,1:3]
 scores
@@ -244,14 +298,24 @@ plot(c(1,2,3,4),eigvals,type="l",xlab="principal component number")
 
 **(i) Create a scatter plot based on the 1st and 2nd PCs. Which state stands out? Provide some explanations. In this plot you should annotate the points with state names.**
 
-ADD INTERPRETATION HERE
+"low score in PC1 resulted in...."
 
 ```{r}
 data = data.frame(x=pca_model$x[,1],
            y=pca_model$x[,2],
            z=pca_model$x[,0])
-plot(data$x,data$y)
+plot(data$x,data$y,xlab = "PC1", ylab="PC2")
 text(data$x,data$y,row.names(data))
+```
+
+(Below not really part of the above question but I wanted to see it displayed. Note for myself: the direction of the vector for murder below represents the first loading in PC1 and first loading in PC2 for Murder.)
+
+```{r}
+biplot(pca_model)
+```
+
+```{r}
+?biplot
 ```
 
 **(j) Create the same scatter plot but color the states according to the variable UrbanPop.**
@@ -266,8 +330,7 @@ plot(data$x,data$y)
 text(data$x,data$y,row.names(data),col=data$pop)
 ```
 
-**(k) Create a scatter plot based on the 1st and 3rd PCs. Comment on the difference between
-this plot and the previous one**
+**(k) Create a scatter plot based on the 1st and 3rd PCs. Comment on the difference between this plot and the previous one**
 
 ADD INTERPRETATION HERE
 
@@ -275,7 +338,7 @@ ADD INTERPRETATION HERE
 data = data.frame(x=pca_model$x[,1],
            y=pca_model$x[,3],
            z=pca_model$x[,0])
-plot(data$x,data$y)
+plot(data$x,data$y,xlab="PC1 ", ylab="PC3")
 text(data$x,data$y,row.names(data))
 ```
 
