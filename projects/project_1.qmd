@@ -1,0 +1,6 @@
+---
+title: "Project 1"
+author: Will Tirone, Natalie Smith
+format: pdf
+editor: visual
+---
