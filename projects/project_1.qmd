@@ -1,6 +1,118 @@
 ---
-title: "Project 1"
-author: Will Tirone, Natalie Smith
+title: "Project 1 Redwood Data Report"
+author: William Tirone (ID: 2774025) and Natalie Smith (ID: 2819547)
 format: pdf
 editor: visual
 ---
+
+Paper here: https://sakai.duke.edu/access/content/group/cca7dc7c-9906-43db-af3b-91d09e2e9748/proj1/tolle2005.pdf
+
+```{r}
+library(tidyverse)
+```
+
+"The file sonoma-data-all.csv is a simple concatenation of the two files sonoma-datalog.csv and sonoma-data-net.csv"
+
+```{r}
+
+#loading in data
+data_net = read.csv('data/sonoma-data-net.csv')
+data_log = read.csv('data/sonoma-data-log.csv')
+data_all = read.csv('data/sonoma-data-all.csv')
+```
+
+```{r}
+names(data_net)
+print("=============")
+names(data_log)
+```
+
+# 2 Data Cleaning 
+
+*(a) Check histograms of each variable in two data files (Plot only the ones that you think
+are interesting or relevant). Which variable is not consistent? Convert the data to the
+same range. NO CODE but explain clearly what you did.*
+
+```{r}
+
+#data_net file 
+hist(data_net$humidity)
+hist(data_net$humid_temp)
+hist(data_net$humid_adj)
+
+#data_log 
+hist(data_log$humidity)
+hist(data_log$humid_temp)
+hist(data_log$humid_adj)
+
+```
+
+*(b) Remove missing data. Comment on the number of missing measurements and the
+corresponding date and time period.*
+
+*(c) The location data is separate in another file mote-location-data.txt. Incorporate it in
+the main table. Hint: here the nodeid serves a key to add columns for height, direction,
+distance and tree. State the number of variables in your new data frame.
+
+(d) Use histogram and quantiles to visually identify easy outliers for each of the four variables: humidity, humid temp, hamatop, hamabot. And remove them. Comment on the
+rationality behind your removal.*
+
+*(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to
+remove them than to keep them.*
+
+# 3 Data Exploration
+
+*(a) Make some pairwise scatterplots of some variables. Pick a reasonable time period.
+Explain your choice and describe your findings.*
+
+*(b) Are any of the predictors associated with Incident PAR? If so, explain the relationship.*
+
+*(c) Each variable of our data basically have three dimensions: value, height and time.
+Consider each variable as a time series and look at its temporal trend. Generate such
+plots (value vs time) with height as color cue for at least four variables (Temperature,
+Relative Humidity, Incident PAR and Reflected PAR). You can do it for different time
+scales (during an hour, during a day or during the entire experiment). However, at
+least the plots with days as x-axis are required. Comment on the range, continuity and
+strange behaviors in these variables.*
+
+*(d) After PCA analysis, generate scree plot of the data. Can this data be approximated by
+some low-dimensional representation?*
+
+# 4 Interesting Findings
+
+*Describe two/three interesting findings from exploratory analysis of the data. Try to use the
+techniques that you have learned, such as histograms, PCA, K-means, GMM and hierachical
+clustering etc. Note that even though you got a dataframe with only a few columns, you
+may reshape the dataframe before doing any EDA, such as reorganizing such that aggregated
+information in each day is a column, or a particular hour in each day is a column. Comment
+on your interesting findings. Different bonuses are given based on how interesing your result
+is.*
+
+*(a) Finding 1.*
+
+*(b) Finding 2.*
+
+*(c) (Bonus) Finding 3. Bonus is given only if we find all three findings interesting.*
+
+# 5 Graph Critique 
+
+The overall quality of the paper by Tolle et al. is good. However, some plots are not perfect
+from a statistician\'s point of view.
+
+
+
+(a) Figure 3\[a\] shows the distributions of sensor readings projected onto the value dimension,
+using a histogram. It turns out that both the incident and reflected PAR have long tail.
+We could not read full information from this histogram. Try to make a better plot with
+log transform of the data.
+
+(b) What message do the boxplots in Figure 3\[c\] and 3\[d\] try to convey? Do you think the
+plots convey the right messages? If not generate a new plot with the same data. Hint:
+compare to some plots in Figure 4.
+
+(c) Any suggestions for improving the first two plots in Figure 4? Can you distinguish all
+the colors in these two plots?
+
+(d) Comment on Figure 7. Is it possible to generate a better visualization to highlight the
+difference between network and log data?
+
