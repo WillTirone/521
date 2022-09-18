@@ -44,7 +44,7 @@ eigen(A)
 
 \(g\) After applying K-means, the vectors representing the first cluster center and the second
 
-cluster center are always orthogonal.
+**FALSE.** Per the algorithm for k-means on p. 519 of ISL, there is no step that implies or requires orthogonality because the centroids are chosen randomly.
 
 # 2 SVD
 
@@ -136,10 +136,12 @@ plot(sizes,svd_time, main="matrix of size n x n vs. time to perform svd (in seco
 
 ## 3.1
 
+Below is the implementation. This works correctly compared to the eigen function.
+
 ```{r}
 test = matrix(c(1,2,3,2,-1,4,3,4,-5), nrow=3, ncol = 3, byrow = TRUE)
 
-power <- function(A,iterations=20) {
+power <- function(A,iterations=15) {
 
   # arbitrary starting vector 
   wk = matrix(A[,1])
@@ -148,13 +150,14 @@ power <- function(A,iterations=20) {
   {
     wk_1 = A %*% wk
   
-    wk_norm = norm(wk_1,"2")
+    s_k1 = wk_1[which.max(abs(wk_1))]
   
-    wk = wk_1 / wk_norm
+    wk = wk_1/s_k1
+  
   }
   
-  vector = wk
-  value = wk_norm
+  vector = wk / norm(wk,'2')
+  value = s_k1
 
   output = list(vector, value)
   names(output) = c("Eigenvector","Eigenvalue")
@@ -177,6 +180,8 @@ eigen(B)
 ```
 
 Deflating matrix:
+
+This works up to the third iteration, at which point it doesn't match the eigen function. I'm not entirely sure why.
 
 ```{r}
 
@@ -219,7 +224,7 @@ hist(USArrests$UrbanPop)
 hist(USArrests$Rape)
 ```
 
-**(c) Do you see any correlations between the four columns? Plot and comment**
+**(c) Do you see any correlations between the four columns? Plot and comment.**
 
 It looks like murder and rape are right skewed and urban pop and assault are somewhat normally distributed, though assault looks more bi-modal.
 
@@ -242,14 +247,8 @@ pca_model = prcomp(USArrests,scale = TRUE)
 summary(pca_model) 
 ```
 
-# QUESTIONS
-
--   what below corresponds to $Z_1 = \phi_{11}X_1 + ... + \phi_{p1}Xp$
-
-    -   first PC is a lin comb of p original variables
-
 ```{r}
-# columns here are loadings
+# just printing another view of the model here 
 pca_model
 ```
 
@@ -267,7 +266,7 @@ PC2: states with higher murders / assaults will be in top part of biplot.
 
 loading_matrix = pca_model$rotation 
 cat("Confirming that this is a matrix: ", class(loading_matrix),"\n")
-loading_matrix[1:4,]
+loading_matrix[1:4,1:3]
 ```
 
 **(f) Obtain the principal components (or scores) and store them in a matrix, include row and column names. Display the first three PCs.**
@@ -298,7 +297,7 @@ plot(c(1,2,3,4),eigvals,type="l",xlab="principal component number")
 
 **(i) Create a scatter plot based on the 1st and 2nd PCs. Which state stands out? Provide some explanations. In this plot you should annotate the points with state names.**
 
-"low score in PC1 resulted in...."
+California stands out significantly - explanations are a bit challenging here because the data is so scattered, it doesn't look like there's anything obvious that relates the states to one another. In a sense, this could maybe tell us that if we were trying to group the different states we would want some additional variables and measurements.
 
 ```{r}
 data = data.frame(x=pca_model$x[,1],
@@ -314,25 +313,30 @@ text(data$x,data$y,row.names(data))
 biplot(pca_model)
 ```
 
-```{r}
-?biplot
-```
-
 **(j) Create the same scatter plot but color the states according to the variable UrbanPop.**
+
+(Code used from this post: https://stackoverflow.com/questions/9946630/colour-points-in-a-plot-differently-depending-on-a-vector-of-values)
+
+It looks like the values closer to blue are more densely populated and the red values are more sparsely populated.
 
 ```{r}
 data = data.frame(x=pca_model$x[,1],
            y=pca_model$x[,2],
            pop=USArrests$UrbanPop,
-           z=pca_model$x[,0])
+           z=pca_model$x[,0]) 
 
-plot(data$x,data$y)
-text(data$x,data$y,row.names(data),col=data$pop)
+sorted = data[order(data$pop),]
+rbPal <- colorRampPalette(c('red','blue'))
+sorted$color <- rbPal(10)[as.numeric(cut(data$pop,breaks = 10))]
+
+
+plot(sorted$x,sorted$y,xlab='PC1',ylab='PC2')
+text(sorted$x,sorted$y,row.names(data),col=sorted$col)
 ```
 
 **(k) Create a scatter plot based on the 1st and 3rd PCs. Comment on the difference between this plot and the previous one**
 
-ADD INTERPRETATION HERE
+The first thing I notice is that the data is a little more squished around 0 on the y-axis. I think this indicates that more of the variation is explained by PC1 than PC3 (and comparing above, PC2). This is also confirmed by the scree plot - while the third PC offers some explanation of variation, it is lower than 1 & 2.
 
 ```{r}
 data = data.frame(x=pca_model$x[,1],
@@ -341,5 +345,3 @@ data = data.frame(x=pca_model$x[,1],
 plot(data$x,data$y,xlab="PC1 ", ylab="PC3")
 text(data$x,data$y,row.names(data))
 ```
-
-# 5 Optional
