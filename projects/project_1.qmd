@@ -9,33 +9,67 @@ editor: visual
 library(tidyverse)
 ```
 
+# TODO
+
+-   revise each other's sections of part 1
+-   check on depth scale
+-   double check we removed all nulls
+
 ```{r}
 
 # loading in data
 data_net = read.csv('data/sonoma-data-net.csv')
 data_log = read.csv('data/sonoma-data-log.csv')
-
-# concat of previous two 
-data_all = read.csv('data/sonoma-data-all.csv')
 ```
 
 # 2 Data Cleaning
 
+We decided not to plot result_time or epoch, as these are just time measurements. We also did not plot nodeid or parent since these are identifying keys for the specific nodes.
+
+Voltage is not consistent between the two. data_log is in volts, while data_net appears to be 100x the amount of voltage. Since the sensors have a maximum range up to 10 volts, from consulting the spec sheet here ( https://sensirion.com/products/catalog/SHT11/, https://docs.rs-online.com/6fa1/0900766b809880e5.pdf), the original scale from 0 to 1000 is not correct. Further, consulting the orders of magnitude for voltage (https://en.wikipedia.org/wiki/Orders_of_magnitude\_(voltage)), we believe the measurement for voltage in data_net is actually in centivolts. Thus, we divided by 100 to maintain the same range.
+
+Since the nodes were placed 0.1 - 1.0 m from the tree trunk, we divided the depths by 100 to scale them properly.
+
 ```{r}
 
 #data_net file 
-hist(data_net$humidity)
-hist(data_net$humid_temp)
-hist(data_net$humid_adj)
+
+hist(data_net$voltage/100,breaks=100) # above outlier here? 
+hist(data_net$depth/10,breaks=100) # outlier here 
+hist(data_net$humidity,breaks=100) # bottom outlier here , some > 100%
+hist(data_net$humid_temp,breaks=100) # above outlier here, temperature
+hist(data_net$humid_adj,breaks=100) # max and min outlier 
+hist(data_net$hamatop,breaks=100) #unsure on outliers
+hist(data_net$hamabot,breaks=100) # also unsure on outliers
 
 #data_log 
-hist(data_log$humidity)
-hist(data_log$humid_temp)
-hist(data_log$humid_adj)
-
+hist(data_log$voltage,breaks=100) # min outlier here, change scale
+hist(data_log$depth/10,breaks=100)
+hist(data_log$humidity,breaks=100)
+hist(data_log$humid_temp,breaks=100)
+hist(data_log$humid_adj,breaks=100)
+hist(data_log$hamatop,breaks=100) 
+hist(data_log$hamabot,breaks=100)
 ```
 
-*(b) Remove missing data. Comment on the number of missing measurements and the corresponding date and time period.*
+Here, we rescale depth and voltage in their respective dataframes and then concatenate into the corrected form of data_all with adjusted scales.
+
+```{r}
+data_net = data_net |> mutate(voltage = voltage/100,
+                   depth = depth/10)
+
+data_log = data_log |> mutate(depth = depth/10)
+
+data_all = rbind(data_net,data_log)
+```
+
+\(b\)
+
+Our initial row count is 416,036, and removed 12,532 rows that had NA values for humidity, temperature, and both PAR measurements. Each row was missing data from every column.
+
+```{r}
+data_all = data_all |> filter(!is.na(humidity))
+```
 
 \(c\)
 
@@ -44,10 +78,49 @@ We left joined the data on the noideid / ID column to add 4 new variables to our
 ```{r}
 location_data = read.table('data/mote-location-data.txt',header=TRUE)
 data_all = dplyr::left_join(data_all,location_data,by=c('nodeid' = 'ID'))
-dim(data_all)[2]
+cat("Number of total variables in new df : ",dim(data_all)[2])
 ```
 
 d\)
+
+# Outlier Rejection Methodology
+
+| Variable   | Notes                                  |
+|------------|----------------------------------------|
+| humidity   |                                        |
+| Humid Temp |                                        |
+| hamatop    | incident                               |
+| hamabot    | reflected, remove max value, too large |
+
+```{r}
+max((data_net$parent)) # largest 16-bit integer, throw out 
+max((data_net$depth)) # largest 8-bit 
+
+hist(data_all$humidity,breaks=100) # bottom outlier here , some > 100%
+hist(data_all$humid_temp,breaks=100) # above outlier here, temperature
+hist(data_all$hamatop,breaks=100) #unsure on outliers
+hist(data_all$hamabot,breaks=100) 
+
+data_all %>%
+  filter(data_all$humidity>0) |>
+  ggplot(aes(x = humidity)) +
+  geom_boxplot()
+
+
+```
+
+```{r}
+# using quantiles 
+quantile(data_all$voltage,probs = seq(0,1,0.1))
+```
+
+```{r}
+# outlier removal 
+
+data_all |> filter(voltage >= 2.4 & voltage <= 5.5) # per spec sheet
+  
+#  filter(humidity >= 0 & humidity <= 100) |> 
+```
 
 *(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to remove them than to keep them.*
 
