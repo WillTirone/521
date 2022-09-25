@@ -1,35 +1,25 @@
 ---
 title: "Project 1 Redwood Data Report"
-author: William Tirone (ID: 2774025) and Natalie Smith (ID: 2819547)
+author: William Tirone (2774025) and Natalie Smith (2819547)
 format: pdf
 editor: visual
 ---
 
-Paper here: https://sakai.duke.edu/access/content/group/cca7dc7c-9906-43db-af3b-91d09e2e9748/proj1/tolle2005.pdf
-
-```{r}
+```{r,echo=FALSE,message = FALSE, warning = FALSE}
 library(tidyverse)
 ```
 
-"The file sonoma-data-all.csv is a simple concatenation of the two files sonoma-datalog.csv and sonoma-data-net.csv"
-
 ```{r}
 
-#loading in data
+# loading in data
 data_net = read.csv('data/sonoma-data-net.csv')
 data_log = read.csv('data/sonoma-data-log.csv')
+
+# concat of previous two 
 data_all = read.csv('data/sonoma-data-all.csv')
 ```
 
-```{r}
-names(data_net)
-print("=============")
-names(data_log)
-```
-
 # 2 Data Cleaning
-
-*(a) Check histograms of each variable in two data files (Plot only the ones that you think are interesting or relevant). Which variable is not consistent? Convert the data to the same range. NO CODE but explain clearly what you did.*
 
 ```{r}
 
@@ -47,9 +37,17 @@ hist(data_log$humid_adj)
 
 *(b) Remove missing data. Comment on the number of missing measurements and the corresponding date and time period.*
 
-\*(c) The location data is separate in another file mote-location-data.txt. Incorporate it in the main table. Hint: here the nodeid serves a key to add columns for height, direction, distance and tree. State the number of variables in your new data frame.
+\(c\)
 
-(d) Use histogram and quantiles to visually identify easy outliers for each of the four variables: humidity, humid temp, hamatop, hamabot. And remove them. Comment on the rationality behind your removal.\*
+We left joined the data on the noideid / ID column to add 4 new variables to our total data: Height, Direc, Dist, and Tree. However, comparing the number of unique ID's in the location data to the total data, we have 73 unique IDs in the total data with 80 in the location data. This represents the sensors that broke or did not transmit data during the study.
+
+```{r}
+location_data = read.table('data/mote-location-data.txt',header=TRUE)
+data_all = dplyr::left_join(data_all,location_data,by=c('nodeid' = 'ID'))
+dim(data_all)[2]
+```
+
+d\)
 
 *(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to remove them than to keep them.*
 
