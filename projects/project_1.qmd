@@ -80,7 +80,7 @@ data_all = data_all |> filter(!is.na(humidity))
 summary(bad_data$result_time)
 ```
 
-\(c\)
+### (c)
 
 ```{r}
 location_data = read.table('data/mote-location-data.txt',header=TRUE)
@@ -88,20 +88,19 @@ data_all = dplyr::left_join(data_all,location_data,by=c('nodeid' = 'ID'))
 cat("Number of total variables in new df : ",dim(data_all)[2])
 ```
 
-d\)
-
-# Outlier Rejection Methodology
+### d) Outlier Rejection
 
 | Variable   | Notes                                  |
 |------------|----------------------------------------|
-| humidity   |                                        |
+| humidity   | less than 0 greater than 100           |
 | Humid Temp |                                        |
 | hamatop    | incident                               |
 | hamabot    | reflected, remove max value, too large |
 
 ```{r}
-max((data_net$parent)) # largest 16-bit integer, throw out 
-max((data_net$depth)) # largest 8-bit 
+max((data_all$parent)) # largest 16-bit integer, throw out 
+
+max((data_all$depth)) # largest 8-bit 
 
 hist(data_all$humidity,breaks=100) # bottom outlier here , some > 100%
 hist(data_all$humid_temp,breaks=100) # above outlier here, temperature
@@ -117,16 +116,28 @@ data_all %>%
 ```
 
 ```{r}
+# checking for bad "characteristic" data like labels etc. 
+unique(data_all[,'Direc'])
+```
+
+```{r}
+# may want to fill in this data
+data_all |> filter(is.na(Direc))
+```
+
+```{r}
 # using quantiles 
 quantile(data_all$voltage,probs = seq(0,1,0.1))
 ```
 
 ```{r}
-# outlier removal 
+# outlier removal and miscellaneous outlier removal
 
-data_all |> filter(voltage >= 2.4 & voltage <= 5.5) # per spec sheet
-  
-#  filter(humidity >= 0 & humidity <= 100) |> 
+data_all = data_all |> filter(voltage >= 2.4 & voltage <= 5.5) |> # per spec sheet
+  filter(humidity >= 0 & humidity <= 100) |> 
+  filter(parent != 65535)
+
+summary(data_all$humidity)
 ```
 
 *(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to remove them than to keep them.*
