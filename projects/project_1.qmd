@@ -7,6 +7,7 @@ editor: visual
 
 ```{r,echo=FALSE,message = FALSE, warning = FALSE}
 library(tidyverse)
+library(GGally)
 ```
 
 # TODO
@@ -14,6 +15,7 @@ library(tidyverse)
 -   revise each other's sections of part 1
 -   check on depth scale
 -   double check we removed all nulls
+-   try ggpairs()?
 
 ```{r}
 
@@ -128,7 +130,18 @@ data_all |> filter(voltage >= 2.4 & voltage <= 5.5) # per spec sheet
 
 *(a) Make some pairwise scatterplots of some variables. Pick a reasonable time period. Explain your choice and describe your findings.*
 
+```{r}
+
+# columns of interest 
+ggpairs(data_all, 5:11, progress = FALSE)
+```
+
 *(b) Are any of the predictors associated with Incident PAR? If so, explain the relationship.*
+
+```{r,warning=FALSE}
+# drop first 4 id columns 
+ggcorr(data_all[,c(-1,-2,-3,-4)],label=TRUE)
+```
 
 *(c) Each variable of our data basically have three dimensions: value, height and time. Consider each variable as a time series and look at its temporal trend. Generate such plots (value vs time) with height as color cue for at least four variables (Temperature, Relative Humidity, Incident PAR and Reflected PAR). You can do it for different time scales (during an hour, during a day or during the entire experiment). However, at least the plots with days as x-axis are required. Comment on the range, continuity and strange behaviors in these variables.*
 
