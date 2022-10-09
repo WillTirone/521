@@ -8,6 +8,7 @@ editor: visual
 ```{r,echo=FALSE,message = FALSE, warning = FALSE}
 library(tidyverse)
 library(GGally)
+library(lubridate)
 library(anytime)
 ```
 
@@ -49,6 +50,11 @@ hist(data_log$hamabot,breaks=100)
 ```
 
 ```{r}
+# PART A 
+
+#reading in data 
+data_net = read.csv('data/sonoma-data-net.csv')
+data_log = read.csv('data/sonoma-data-log.csv')
 
 #scaling voltage and depth to match first data set 
 data_net = data_net |> mutate(voltage = voltage/100, depth = depth/10)
@@ -56,15 +62,17 @@ data_log = data_log |> mutate(depth = depth/10)
 data_all = rbind(data_net,data_log)
 
 #converting to dates from chr to datetime to plot over time 
+
 data_all$result_time = as.POSIXct(data_all$result_time)
-```
 
-\(b\)
+# removing dates that don't make sense
+data_all = data_all |> filter(month(result_time)<7)
 
-```{r}
-# removing null values 
+# PART B 
+
+# removing null values and filtering bad dates 
 bad_data = data_all |> filter(is.na(humidity))
-data_all = data_all |> filter(!is.na(humidity))
+data_all = data_all |> filter(!is.na(humidity)) 
 ```
 
 ```{r}
