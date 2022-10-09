@@ -8,6 +8,7 @@ editor: visual
 ```{r,echo=FALSE,message = FALSE, warning = FALSE}
 library(tidyverse)
 library(GGally)
+library(anytime)
 ```
 
 # TODO
@@ -18,19 +19,12 @@ library(GGally)
 -   try ggpairs()?
 
 ```{r}
-
 # loading in data
 data_net = read.csv('data/sonoma-data-net.csv')
 data_log = read.csv('data/sonoma-data-log.csv')
 ```
 
 # 2 Data Cleaning
-
-We decided not to plot result_time or epoch, as these are just time measurements. We also did not plot nodeid or parent since these are identifying keys for the specific nodes.
-
-Voltage is not consistent between the two. data_log is in volts, while data_net appears to be 100x the amount of voltage. Since the sensors have a maximum range up to 10 volts, from consulting the spec sheet here ( https://sensirion.com/products/catalog/SHT11/, https://docs.rs-online.com/6fa1/0900766b809880e5.pdf), the original scale from 0 to 1000 is not correct. Further, consulting the orders of magnitude for voltage (https://en.wikipedia.org/wiki/Orders_of_magnitude\_(voltage)), we believe the measurement for voltage in data_net is actually in centivolts. Thus, we divided by 100 to maintain the same range.
-
-Since the nodes were placed 0.1 - 1.0 m from the tree trunk, we divided the depths by 100 to scale them properly.
 
 ```{r}
 
@@ -54,28 +48,29 @@ hist(data_log$hamatop,breaks=100)
 hist(data_log$hamabot,breaks=100)
 ```
 
-Here, we rescale depth and voltage in their respective dataframes and then concatenate into the corrected form of data_all with adjusted scales.
+```{r}
+
+#scaling voltage and depth to match first data set 
+data_net = data_net |> mutate(voltage = voltage/100, depth = depth/10)
+data_log = data_log |> mutate(depth = depth/10)
+data_all = rbind(data_net,data_log)
+```
 
 ```{r}
-data_net = data_net |> mutate(voltage = voltage/100,
-                   depth = depth/10)
 
-data_log = data_log |> mutate(depth = depth/10)
-
-data_all = rbind(data_net,data_log)
+#converting to dates from chr to datetime to plot over time 
+data_all$result_time = as.POSIXct(data_all$result_time)
 ```
 
 \(b\)
 
-Our initial row count is 416,036, and removed 12,532 rows that had NA values for humidity, temperature, and both PAR measurements. Each row was missing data from every column.
-
 ```{r}
+# removing null values 
+bad_data = data_all |> filter(is.na(humidity))
 data_all = data_all |> filter(!is.na(humidity))
 ```
 
 \(c\)
-
-We left joined the data on the noideid / ID column to add 4 new variables to our total data: Height, Direc, Dist, and Tree. However, comparing the number of unique ID's in the location data to the total data, we have 73 unique IDs in the total data with 80 in the location data. This represents the sensors that broke or did not transmit data during the study.
 
 ```{r}
 location_data = read.table('data/mote-location-data.txt',header=TRUE)
