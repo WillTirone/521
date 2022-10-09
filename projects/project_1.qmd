@@ -54,9 +54,6 @@ hist(data_log$hamabot,breaks=100)
 data_net = data_net |> mutate(voltage = voltage/100, depth = depth/10)
 data_log = data_log |> mutate(depth = depth/10)
 data_all = rbind(data_net,data_log)
-```
-
-```{r}
 
 #converting to dates from chr to datetime to plot over time 
 data_all$result_time = as.POSIXct(data_all$result_time)
@@ -68,6 +65,11 @@ data_all$result_time = as.POSIXct(data_all$result_time)
 # removing null values 
 bad_data = data_all |> filter(is.na(humidity))
 data_all = data_all |> filter(!is.na(humidity))
+```
+
+```{r}
+# identifying the time range for the data with null values
+summary(bad_data$result_time)
 ```
 
 \(c\)
