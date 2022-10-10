@@ -67,6 +67,9 @@ data_net = data_net |> mutate(voltage = voltage/100, depth = depth/100)
 data_log = data_log |> mutate(depth = depth/100)
 data_all = rbind(data_net,data_log)
 
+#changing Incident PAR units per article
+data_all = data_all |> mutate(hamatop = hamatop/54, hamabot = hamabot/54) 
+
 # PART B - removing missing or bad data 
 
 # fixing result_time 
@@ -93,37 +96,27 @@ cat("Number of total variables in new df : ",dim(data_all)[2])
 
 ### d) Outlier Rejection
 
-| Variable   | Notes                                  |
-|------------|----------------------------------------|
-| humidity   | less than 0 greater than 100           |
-| Humid Temp |                                        |
-| hamatop    | incident                               |
-| hamabot    | reflected, remove max value, too large |
-
 ```{r}
+# if run in order, this will plot temperature before we removed outliers
+ggplot(data_all,aes(x=humid_temp)) + geom_histogram(binwidth=1, fill="#5a2e26", color="#5a2e26", alpha=0.9) + labs(title="Temperature Before Removing Outliers")
 
-#histograms to identify outliers
-
-hist(data_all$humidity,breaks=100) # bottom outlier here , some > 100%
-hist(data_all$humid_temp,breaks=100) # above outlier here, temperature
-hist(data_all$hamatop,breaks=100) #unsure on outliers
-hist(data_all$hamabot,breaks=100) 
-
+#hamatop bad filtering 
+bad_hamatop_hours = data_all |> filter(hamatop==0) 
+hours = data.frame(hour(bad_hamatop_hours$datetimes))
+ggplot(hours,aes(x=hour.bad_hamatop_hours.datetimes.)) + geom_histogram(binwidth=1,color='#327da8',fill='#327da8',alpha=0.9) + labs(title="Hour of Day With 0 Incident PAR") + xlab('Hour of Day')
 ```
 
-```{r}
-# using quantiles 
-quantile(data_all$voltage,probs = seq(0,1,0.1))
-```
+244570
 
 ```{r}
 # outlier removal and miscellaneous outlier removal
 
-data_all = data_all |> filter(voltage >= 2.4 & voltage <= 5.5) |> 
+data_all = data_all |> 
+  filter(voltage >= 2.4 & voltage <= 5.5) |> 
   filter(humidity >= 0 & humidity <= 100) |> 
-  filter(humid_temp <= 100) |> 
-  filter(parent != 65535) 
-
+  filter(humid_temp <= 35) |> 
+  filter(parent != 65535) |>
+  filter(!(hamatop == 0 & hour(datetimes)>7 & hour(datetimes)<19))
 ```
 
 *(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to remove them than to keep them.*
@@ -131,6 +124,22 @@ data_all = data_all |> filter(voltage >= 2.4 & voltage <= 5.5) |>
 # 3 Data Exploration
 
 #### *(a) Make some pairwise scatterplots of some variables. Pick a reasonable time period. Explain your choice and describe your findings.*
+
+```{r}
+# create discrete bins to plot with later
+data_all$height_bins = cut_interval(data_all$Height,6)
+
+# generating facet plots 
+plot = ggplot(data_all, aes(x=hamatop,y=hamabot)) + geom_point(size = .1,alpha=.2) 
+plot + facet_wrap(~height_bins,nrow=2)
+
+# try using depth as a discrete bin 
+data_all$depth_bins = cut_interval(data_all$depth,10)
+
+# plot for depth
+dplot = ggplot(data_all, aes(x=hamatop,y=humid_temp)) + geom_point(size = .1,alpha=.2) 
+dplot + facet_wrap(~depth_bins,nrow=2)
+```
 
 ```{r}
 
@@ -173,9 +182,6 @@ ggplot(data = data_all_cleaned, aes(x = datetimes, y = hamabot))+
   geom_point(color = "#00AFBB", size = .5)
 
 
-
-
-
 #lets look at dates for the last two: we're choosing may 20th because 
 
 maytwenty = data_all_cleaned %>% filter(day(datetimes) == 20 & month(datetimes) == 05) 
@@ -190,16 +196,21 @@ ggplot(data = maytwenty, aes(x = datetimes, y = hamabot)) +
 ### d)
 
 ```{r}
-pca_prcomp <- prcomp(data_all_cleaned %>% select(-Tree, -Direc, -result_time) %>% na.omit(), scale. = TRUE, center = TRUE)
+pca_prcomp <- prcomp(data_all_cleaned %>% select(-Tree, -Direc, -datetimes) %>% na.omit(), scale. = TRUE, center = TRUE)
+
 
 summary(pca_prcomp)
 
 eigenvalues <- pca_prcomp$sdev**2
+
 plot(1:length(eigenvalues), eigenvalues/sum(eigenvalues), type = "l", main = "Screeplot", xlab = "Number of PCs")
+
 points(1:length(eigenvalues), eigenvalues/sum(eigenvalues))
 
 
 length(which(eigenvalues >= mean(eigenvalues)))
+
+
 ```
 
 # 4 Interesting Findings
@@ -218,8 +229,202 @@ The overall quality of the paper by Tolle et al. is good. However, some plots ar
 
 (a) Figure 3\[a\] shows the distributions of sensor readings projected onto the value dimension, using a histogram. It turns out that both the incident and reflected PAR have long tail. We could not read full information from this histogram. Try to make a better plot with log transform of the data.
 
-(b) What message do the boxplots in Figure 3\[c\] and 3\[d\] try to convey? Do you think the plots convey the right messages? If not generate a new plot with the same data. Hint: compare to some plots in Figure 4.
+```{r}
+hist(data_all_cleaned$humid_temp)
 
-(c) Any suggestions for improving the first two plots in Figure 4? Can you distinguish all the colors in these two plots?
+hist(data_all_cleaned$humid_adj)
 
-(d) Comment on Figure 7. Is it possible to generate a better visualization to highlight the difference between network and log data?
+#hist(log(data_all_cleaned$hamatop))
+
+#hist(log(data_all_cleaned$hamabot))
+
+
+
+ggplot(data_all_cleaned,aes(x=log(hamatop))) + 
+
+  geom_histogram(fill="#859168", color="#859168", alpha=0.9) + 
+
+  labs(title="Log-transformation of Incident PAR")
+
+
+
+ggplot(data_all_cleaned,aes(x=log(hamabot))) + 
+
+  geom_histogram(fill="#859168", color="#859168", alpha=0.9) + 
+
+  labs(title="Log-transformation of Reflected PAR")
+
+
+
+#another chunk
+
+#bad
+
+data_all_cleaned %>% 
+
+  ggplot(aes(x = humid_temp, y = factor(Height))) +
+
+  geom_boxplot() + 
+
+  labs(title = "Temperature",
+
+       x = "temperature",
+
+       y = "Node Height")
+
+
+
+#our fix (Def not better)
+
+forplotting = data_all_cleaned %>%
+
+  group_by(Height) %>%
+
+  summarize(tempmed = median(humid_temp),
+
+            hummed = median(humid_adj),
+
+            hamatopmed = median(hamatop),
+
+            hapabotmed = median(hamabot))
+
+
+
+forplotting %>% 
+
+  ggplot(aes(x = tempmed, y = factor(Height))) +
+
+  geom_point() + 
+
+  labs(title = "Temperature",
+
+       x = "temperature",
+
+       y = "Node Height")
+
+
+
+forplotting %>% 
+
+  ggplot(aes(x = hummed, y = factor(Height))) +
+
+  geom_point() 
+
+
+
+#median mainly  0
+
+forplotting %>% 
+
+  ggplot(aes(x = hamatopmed, y = factor(Height))) +
+
+  geom_point() 
+
+
+
+#median always 0
+
+forplotting %>% 
+
+  ggplot(aes(x = hapabotmed, y = factor(Height))) +
+
+  geom_point() 
+
+
+
+#for hamatop, hamabot >  0
+
+secondplotting = data_all_cleaned %>%
+
+  filter(hamatop > 0) %>%
+
+  group_by(Height) %>%
+
+  summarize(hamatopmed = median(hamatop))
+
+
+
+botsecondplotting = data_all_cleaned %>%
+
+  filter(hamabot > 0) %>%
+
+  group_by(Height) %>%
+
+  summarize(hamabotmed = median(hamabot))
+
+
+
+secondplotting %>%
+
+  ggplot(aes(x = hamatopmed, y = factor(Height))) +
+
+  geom_point() 
+
+
+
+botsecondplotting %>% 
+
+  ggplot(aes(x = hamabotmed, y = factor(Height))) +
+
+  geom_point() 
+```
+
+(a) Any suggestions for improving the first two plots in Figure 4? Can you distinguish all the colors in these two plots?
+
+    ```{r}
+    #attempt 1
+
+    data_all_cleaned %>% 
+
+      filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
+
+      ggplot(aes(x = datetimes, y = humid_temp, col = factor(Height))) +
+
+      geom_line(col = "darkgrey")
+
+    #highlight highest node, highlight lowest node
+
+
+
+    #attempt 2
+
+    unique(factor(data_all_cleaned$Height)) #59 levels
+
+    min(na.omit(data_all_cleaned$Height)) #10.5
+
+    max(na.omit(data_all_cleaned$Height)) #66.5
+
+
+
+    #TODO: plot again
+
+
+
+    #relative humidity replica
+
+    data_all_cleaned %>% 
+
+      filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
+
+      ggplot(aes(x = datetimes, y = humid_adj, col = factor(Height))) +
+
+      geom_line(col = 5)
+
+    #highlight highest node, highlight lowest node
+
+
+
+    #attempt 2 - only 1 height
+
+    data_all_cleaned %>% 
+
+      filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
+
+      filter(Height == 47) %>% #around median height
+
+      ggplot(aes(x = datetimes, y = humid_adj)) +
+
+      geom_line()
+    ```
+
+(b) Comment on Figure 7. Is it possible to generate a better visualization to highlight the difference between network and log data?
