@@ -10,14 +10,8 @@ library(tidyverse)
 library(GGally)
 library(lubridate)
 library(anytime)
+library(factoextra)
 ```
-
-# TODO
-
--   revise each other's sections of part 1
--   check on depth scale
--   double check we removed all null
--   FIGURE OUT HOW TO ADD LINKS / SUBSCRIPTS TO OVERLEAF
 
 # 2 Data Cleaning
 
@@ -49,6 +43,7 @@ hist(data_log$hamatop,breaks=100)
 hist(data_log$hamabot,breaks=100)
 
 # hists to put in paper 
+
 ggplot(data_net,aes(x=voltage)) + geom_histogram(binwidth=10, fill="#859168", color="#859168", alpha=0.9) + labs(title="Incorrect Range Voltage From data_net")
 
 ggplot(data_log,aes(x=voltage)) + geom_histogram(binwidth=.1, fill="#859168", color="#859168", alpha=0.9) + labs(title="Correct Range Voltage From data_log")
@@ -97,6 +92,9 @@ cat("Number of total variables in new df : ",dim(data_all)[2])
 ### d) Outlier Rejection
 
 ```{r}
+
+# histograms to determine direction to remove outliers 
+
 # if run in order, this will plot temperature before we removed outliers
 ggplot(data_all,aes(x=humid_temp)) + geom_histogram(binwidth=1, fill="#5a2e26", color="#5a2e26", alpha=0.9) + labs(title="Temperature Before Removing Outliers")
 
@@ -106,8 +104,6 @@ hours = data.frame(hour(bad_hamatop_hours$datetimes))
 ggplot(hours,aes(x=hour.bad_hamatop_hours.datetimes.)) + geom_histogram(binwidth=1,color='#327da8',fill='#327da8',alpha=0.9) + labs(title="Hour of Day With 0 Incident PAR") + xlab('Hour of Day')
 ```
 
-244570
-
 ```{r}
 # outlier removal and miscellaneous outlier removal
 
@@ -116,7 +112,9 @@ data_all = data_all |>
   filter(humidity >= 0 & humidity <= 100) |> 
   filter(humid_temp <= 35) |> 
   filter(parent != 65535) |>
-  filter(!(hamatop == 0 & hour(datetimes)>7 & hour(datetimes)<19))
+  filter(!(hamatop == 0 & hour(datetimes)>7 & hour(datetimes)<19)) |> 
+  filter(!is.na(Height))
+
 ```
 
 *(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to remove them than to keep them.*
@@ -141,12 +139,6 @@ dplot = ggplot(data_all, aes(x=hamatop,y=humid_temp)) + geom_point(size = .1,alp
 dplot + facet_wrap(~depth_bins,nrow=2)
 ```
 
-```{r}
-
-# columns of interest 
-ggpairs(data_all, 5:11, progress = FALSE)
-```
-
 #### *(b) Are any of the predictors associated with Incident PAR? If so, explain the relationship.*
 
 ```{r,warning=FALSE}
@@ -157,34 +149,22 @@ ggcorr(data_all[,c(-1,-2,-3,-4)],label=TRUE)
 ### *(c)*
 
 ```{r}
-data_all_cleaned <- data_all %>% 
-  filter(month(datetimes) < 7) %>% 
-  filter(humid_temp <= 100)
-
-
-
-ggplot(data = data_all_cleaned, aes(x = datetimes, y = humid_temp)) +
+ggplot(data = data_all, aes(x = datetimes, y = humid_temp)) +
   geom_point(color = "#00AFBB", size = .5)
 
-
-
-ggplot(data = data_all_cleaned, aes(x = datetimes, y = humid_adj)) +
+ggplot(data = data_all, aes(x = datetimes, y = humid_adj)) +
   geom_point(color = "#00AFBB", size = .5)
 
-
-
-ggplot(data = data_all_cleaned, aes(x = datetimes, y = hamatop)) +
+ggplot(data = data_all, aes(x = datetimes, y = hamatop)) +
   geom_point(color = "#00AFBB", size = .5)
 
-
-
-ggplot(data = data_all_cleaned, aes(x = datetimes, y = hamabot))+
-  geom_point(color = "#00AFBB", size = .5)
+ggplot(data = data_all, aes(x = datetimes, y = hamabot))+
+  geom_point(aes(color=height_bins), size = .5)
 
 
 #lets look at dates for the last two: we're choosing may 20th because 
 
-maytwenty = data_all_cleaned %>% filter(day(datetimes) == 20 & month(datetimes) == 05) 
+maytwenty = data_all %>% filter(day(datetimes) == 20 & month(datetimes) == 05) 
 
 ggplot(data = maytwenty, aes(x = datetimes, y = hamatop)) +
   geom_point(color = "#00AFBB", size = .5)
@@ -196,7 +176,7 @@ ggplot(data = maytwenty, aes(x = datetimes, y = hamabot)) +
 ### d)
 
 ```{r}
-pca_prcomp <- prcomp(data_all_cleaned %>% select(-Tree, -Direc, -datetimes) %>% na.omit(), scale. = TRUE, center = TRUE)
+pca_prcomp <- prcomp(data_all %>% select(-Tree, -Direc, -datetimes) %>% na.omit(), scale. = TRUE, center = TRUE)
 
 
 summary(pca_prcomp)
@@ -215,32 +195,38 @@ length(which(eigenvalues >= mean(eigenvalues)))
 
 # 4 Interesting Findings
 
-*Describe two/three interesting findings from exploratory analysis of the data. Try to use the techniques that you have learned, such as histograms, PCA, K-means, GMM and hierachical clustering etc. Note that even though you got a dataframe with only a few columns, you may reshape the dataframe before doing any EDA, such as reorganizing such that aggregated information in each day is a column, or a particular hour in each day is a column. Comment on your interesting findings. Different bonuses are given based on how interesing your result is.*
+```{r}
 
-*(a) Finding 1.*
+# pulling out one parent on June 1st 
+tree.clust = data_all |> 
+  filter(month(datetimes) == 5 & day(datetimes) == 1) |> 
+  filter(!is.na(Tree))
 
-*(b) Finding 2.*
+ggplot(data = tree.clust, 
+       aes(x = hamatop, y = hamabot)) +
+       geom_point(aes(color=Tree),size=1.5)
 
-*(c) (Bonus) Finding 3. Bonus is given only if we find all three findings interesting.*
+model = kmeans(tree.clust[,c('hamatop','hamabot')],centers = 2,nstart=25)
+
+fviz_cluster(model,data=tree.clust[,c('hamatop','humid_temp')])
+```
 
 # 5 Graph Critique
 
-The overall quality of the paper by Tolle et al. is good. However, some plots are not perfect from a statistician's point of view.
-
-(a) Figure 3\[a\] shows the distributions of sensor readings projected onto the value dimension, using a histogram. It turns out that both the incident and reflected PAR have long tail. We could not read full information from this histogram. Try to make a better plot with log transform of the data.
+#### a)
 
 ```{r}
-hist(data_all_cleaned$humid_temp)
+hist(data_all$humid_temp)
 
-hist(data_all_cleaned$humid_adj)
+hist(data_all$humid_adj)
 
-#hist(log(data_all_cleaned$hamatop))
+#hist(log(data_all$hamatop))
 
-#hist(log(data_all_cleaned$hamabot))
+#hist(log(data_all$hamabot))
 
 
 
-ggplot(data_all_cleaned,aes(x=log(hamatop))) + 
+ggplot(data_all,aes(x=log(hamatop))) + 
 
   geom_histogram(fill="#859168", color="#859168", alpha=0.9) + 
 
@@ -248,7 +234,7 @@ ggplot(data_all_cleaned,aes(x=log(hamatop))) +
 
 
 
-ggplot(data_all_cleaned,aes(x=log(hamabot))) + 
+ggplot(data_all,aes(x=log(hamabot))) + 
 
   geom_histogram(fill="#859168", color="#859168", alpha=0.9) + 
 
@@ -260,7 +246,7 @@ ggplot(data_all_cleaned,aes(x=log(hamabot))) +
 
 #bad
 
-data_all_cleaned %>% 
+data_all %>% 
 
   ggplot(aes(x = humid_temp, y = factor(Height))) +
 
@@ -276,7 +262,7 @@ data_all_cleaned %>%
 
 #our fix (Def not better)
 
-forplotting = data_all_cleaned %>%
+forplotting = data_all %>%
 
   group_by(Height) %>%
 
@@ -334,7 +320,7 @@ forplotting %>%
 
 #for hamatop, hamabot >  0
 
-secondplotting = data_all_cleaned %>%
+secondplotting = data_all %>%
 
   filter(hamatop > 0) %>%
 
@@ -344,7 +330,7 @@ secondplotting = data_all_cleaned %>%
 
 
 
-botsecondplotting = data_all_cleaned %>%
+botsecondplotting = data_all %>%
 
   filter(hamabot > 0) %>%
 
@@ -374,7 +360,7 @@ botsecondplotting %>%
     ```{r}
     #attempt 1
 
-    data_all_cleaned %>% 
+    data_all %>% 
 
       filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
 
@@ -388,11 +374,11 @@ botsecondplotting %>%
 
     #attempt 2
 
-    unique(factor(data_all_cleaned$Height)) #59 levels
+    unique(factor(data_all$Height)) #59 levels
 
-    min(na.omit(data_all_cleaned$Height)) #10.5
+    min(na.omit(data_all$Height)) #10.5
 
-    max(na.omit(data_all_cleaned$Height)) #66.5
+    max(na.omit(data_all$Height)) #66.5
 
 
 
@@ -402,7 +388,7 @@ botsecondplotting %>%
 
     #relative humidity replica
 
-    data_all_cleaned %>% 
+    data_all %>% 
 
       filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
 
@@ -416,7 +402,7 @@ botsecondplotting %>%
 
     #attempt 2 - only 1 height
 
-    data_all_cleaned %>% 
+    data_all %>% 
 
       filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
 
