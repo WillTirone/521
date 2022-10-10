@@ -16,23 +16,23 @@ library(anytime)
 
 -   revise each other's sections of part 1
 -   check on depth scale
--   double check we removed all nulls
--   try ggpairs()?
-
-```{r}
-# loading in data
-data_net = read.csv('data/sonoma-data-net.csv')
-data_log = read.csv('data/sonoma-data-log.csv')
-```
+-   double check we removed all null
+-   FIGURE OUT HOW TO ADD LINKS / SUBSCRIPTS TO OVERLEAF
 
 # 2 Data Cleaning
 
 ```{r}
 
+# loading in data
+data_net = data.frame(read.csv('data/sonoma-data-net.csv'))
+data_log = data.frame(read.csv('data/sonoma-data-log.csv'))
+
+# initial look at the histograms before cleaning below
+
 #data_net file 
 
 hist(data_net$voltage/100,breaks=100) # above outlier here? 
-hist(data_net$depth/10,breaks=100) # outlier here 
+hist(data_net$depth/100,breaks=100) # outlier here 
 hist(data_net$humidity,breaks=100) # bottom outlier here , some > 100%
 hist(data_net$humid_temp,breaks=100) # above outlier here, temperature
 hist(data_net$humid_adj,breaks=100) # max and min outlier 
@@ -41,43 +41,46 @@ hist(data_net$hamabot,breaks=100) # also unsure on outliers
 
 #data_log 
 hist(data_log$voltage,breaks=100) # min outlier here, change scale
-hist(data_log$depth/10,breaks=100)
+hist(data_log$depth/100,breaks=100)
 hist(data_log$humidity,breaks=100)
 hist(data_log$humid_temp,breaks=100)
 hist(data_log$humid_adj,breaks=100)
 hist(data_log$hamatop,breaks=100) 
 hist(data_log$hamabot,breaks=100)
+
+# hists to put in paper 
+ggplot(data_net,aes(x=voltage)) + geom_histogram(binwidth=10, fill="#859168", color="#859168", alpha=0.9) + labs(title="Incorrect Range Voltage From data_net")
+
+ggplot(data_log,aes(x=voltage)) + geom_histogram(binwidth=.1, fill="#859168", color="#859168", alpha=0.9) + labs(title="Correct Range Voltage From data_log")
+
 ```
 
 ```{r}
-# PART A 
+# PART A - converting data to range
 
 #reading in data 
 data_net = read.csv('data/sonoma-data-net.csv')
 data_log = read.csv('data/sonoma-data-log.csv')
 
 #scaling voltage and depth to match first data set 
-data_net = data_net |> mutate(voltage = voltage/100, depth = depth/10)
-data_log = data_log |> mutate(depth = depth/10)
+data_net = data_net |> mutate(voltage = voltage/100, depth = depth/100)
+data_log = data_log |> mutate(depth = depth/100)
 data_all = rbind(data_net,data_log)
 
-#converting to dates from chr to datetime to plot over time 
+# PART B - removing missing or bad data 
 
-data_all$result_time = as.POSIXct(data_all$result_time)
+# fixing result_time 
+datetimes = seq(as.POSIXct('2004-04-27 17:10:00'), by = "5 min", length.out = 13000, tz='PDT')
+epoch = seq(1,13000,1)
+sonoma_dates = data.frame(datetimes,epoch)
 
-# removing dates that don't make sense
-data_all = data_all |> filter(month(result_time)<7)
-
-# PART B 
+# joining epoch and dropping bad result_time data
+data_all = dplyr::left_join(data_all[,-1],sonoma_dates,by='epoch')
 
 # removing null values and filtering bad dates 
 bad_data = data_all |> filter(is.na(humidity))
 data_all = data_all |> filter(!is.na(humidity)) 
-```
 
-```{r}
-# identifying the time range for the data with null values
-summary(bad_data$result_time)
 ```
 
 ### (c)
@@ -98,31 +101,14 @@ cat("Number of total variables in new df : ",dim(data_all)[2])
 | hamabot    | reflected, remove max value, too large |
 
 ```{r}
-max((data_all$parent)) # largest 16-bit integer, throw out 
 
-max((data_all$depth)) # largest 8-bit 
+#histograms to identify outliers
 
 hist(data_all$humidity,breaks=100) # bottom outlier here , some > 100%
 hist(data_all$humid_temp,breaks=100) # above outlier here, temperature
 hist(data_all$hamatop,breaks=100) #unsure on outliers
 hist(data_all$hamabot,breaks=100) 
 
-data_all %>%
-  filter(data_all$humidity>0) |>
-  ggplot(aes(x = humidity)) +
-  geom_boxplot()
-
-
-```
-
-```{r}
-# checking for bad "characteristic" data like labels etc. 
-unique(data_all[,'Direc'])
-```
-
-```{r}
-# may want to fill in this data
-data_all |> filter(is.na(Direc))
 ```
 
 ```{r}
@@ -133,18 +119,18 @@ quantile(data_all$voltage,probs = seq(0,1,0.1))
 ```{r}
 # outlier removal and miscellaneous outlier removal
 
-data_all = data_all |> filter(voltage >= 2.4 & voltage <= 5.5) |> # per spec sheet
+data_all = data_all |> filter(voltage >= 2.4 & voltage <= 5.5) |> 
   filter(humidity >= 0 & humidity <= 100) |> 
-  filter(parent != 65535)
+  filter(humid_temp <= 100) |> 
+  filter(parent != 65535) 
 
-summary(data_all$humidity)
 ```
 
 *(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to remove them than to keep them.*
 
 # 3 Data Exploration
 
-*(a) Make some pairwise scatterplots of some variables. Pick a reasonable time period. Explain your choice and describe your findings.*
+#### *(a) Make some pairwise scatterplots of some variables. Pick a reasonable time period. Explain your choice and describe your findings.*
 
 ```{r}
 
@@ -152,16 +138,69 @@ summary(data_all$humidity)
 ggpairs(data_all, 5:11, progress = FALSE)
 ```
 
-*(b) Are any of the predictors associated with Incident PAR? If so, explain the relationship.*
+#### *(b) Are any of the predictors associated with Incident PAR? If so, explain the relationship.*
 
 ```{r,warning=FALSE}
 # drop first 4 id columns 
 ggcorr(data_all[,c(-1,-2,-3,-4)],label=TRUE)
 ```
 
-*(c) Each variable of our data basically have three dimensions: value, height and time. Consider each variable as a time series and look at its temporal trend. Generate such plots (value vs time) with height as color cue for at least four variables (Temperature, Relative Humidity, Incident PAR and Reflected PAR). You can do it for different time scales (during an hour, during a day or during the entire experiment). However, at least the plots with days as x-axis are required. Comment on the range, continuity and strange behaviors in these variables.*
+### *(c)*
 
-*(d) After PCA analysis, generate scree plot of the data. Can this data be approximated by some low-dimensional representation?*
+```{r}
+data_all_cleaned <- data_all %>% 
+  filter(month(datetimes) < 7) %>% 
+  filter(humid_temp <= 100)
+
+
+
+ggplot(data = data_all_cleaned, aes(x = datetimes, y = humid_temp)) +
+  geom_point(color = "#00AFBB", size = .5)
+
+
+
+ggplot(data = data_all_cleaned, aes(x = datetimes, y = humid_adj)) +
+  geom_point(color = "#00AFBB", size = .5)
+
+
+
+ggplot(data = data_all_cleaned, aes(x = datetimes, y = hamatop)) +
+  geom_point(color = "#00AFBB", size = .5)
+
+
+
+ggplot(data = data_all_cleaned, aes(x = datetimes, y = hamabot))+
+  geom_point(color = "#00AFBB", size = .5)
+
+
+
+
+
+#lets look at dates for the last two: we're choosing may 20th because 
+
+maytwenty = data_all_cleaned %>% filter(day(datetimes) == 20 & month(datetimes) == 05) 
+
+ggplot(data = maytwenty, aes(x = datetimes, y = hamatop)) +
+  geom_point(color = "#00AFBB", size = .5)
+
+ggplot(data = maytwenty, aes(x = datetimes, y = hamabot)) +
+  geom_point(color = "#00AFBB", size = .5)
+```
+
+### d)
+
+```{r}
+pca_prcomp <- prcomp(data_all_cleaned %>% select(-Tree, -Direc, -result_time) %>% na.omit(), scale. = TRUE, center = TRUE)
+
+summary(pca_prcomp)
+
+eigenvalues <- pca_prcomp$sdev**2
+plot(1:length(eigenvalues), eigenvalues/sum(eigenvalues), type = "l", main = "Screeplot", xlab = "Number of PCs")
+points(1:length(eigenvalues), eigenvalues/sum(eigenvalues))
+
+
+length(which(eigenvalues >= mean(eigenvalues)))
+```
 
 # 4 Interesting Findings
 
