@@ -79,14 +79,10 @@ data_all = dplyr::left_join(data_all[,-1],sonoma_dates,by='epoch')
 bad_data = data_all |> filter(is.na(humidity))
 data_all = data_all |> filter(!is.na(humidity)) 
 
-```
-
-### (c)
-
-```{r}
 location_data = read.table('data/mote-location-data.txt',header=TRUE)
 data_all = dplyr::left_join(data_all,location_data,by=c('nodeid' = 'ID'))
 cat("Number of total variables in new df : ",dim(data_all)[2])
+stored = data_all
 ```
 
 ### d) Outlier Rejection
@@ -112,8 +108,7 @@ data_all = data_all |>
   filter(humidity >= 0 & humidity <= 100) |> 
   filter(humid_temp <= 35) |> 
   filter(parent != 65535) |>
-  filter(!(hamatop == 0 & hour(datetimes)>7 & hour(datetimes)<19)) |> 
-  filter(!is.na(Height))
+  filter(!(hamatop == 0 & hour(datetimes)>7 & hour(datetimes)<19)) 
 
 ```
 
@@ -125,7 +120,7 @@ data_all = data_all |>
 
 ```{r}
 # create discrete bins to plot with later
-data_all$height_bins = cut_interval(data_all$Height,6)
+data_all$height_bins = cut_interval(data_all$Height,3)
 
 # generating facet plots 
 plot = ggplot(data_all, aes(x=hamatop,y=hamabot)) + geom_point(size = .1,alpha=.2) 
@@ -139,6 +134,15 @@ dplot = ggplot(data_all, aes(x=hamatop,y=humid_temp)) + geom_point(size = .1,alp
 dplot + facet_wrap(~depth_bins,nrow=2)
 ```
 
+```{r}
+names(data_all)
+ggplot(data = data_all %>% filter(hamatop >0, hamabot >0), aes(x = hamatop, y = hamabot)) +
+  geom_point(size = 0.1)  + facet_wrap(~height_bins,nrow=2)
+
+ggplot(data = data_all, aes(x = humid_temp, y = humid_adj)) +
+  geom_point(size = 0.05, col = 4)
+```
+
 #### *(b) Are any of the predictors associated with Incident PAR? If so, explain the relationship.*
 
 ```{r,warning=FALSE}
@@ -149,48 +153,62 @@ ggcorr(data_all[,c(-1,-2,-3,-4)],label=TRUE)
 ### *(c)*
 
 ```{r}
+
+# arbitrarily choose a single day to look at 
+
 ggplot(data = data_all, aes(x = datetimes, y = humid_temp)) +
-  geom_point(color = "#00AFBB", size = .5)
+  geom_point(aes(color=height_bins), size = .5) + 
+  labs(title = "Temperature Over Time", x = "Days")
 
 ggplot(data = data_all, aes(x = datetimes, y = humid_adj)) +
-  geom_point(color = "#00AFBB", size = .5)
+  geom_point(aes(color=height_bins), size = .5) + 
+  labs(title = "Relative Humidity Over Time", x = "Days")
 
 ggplot(data = data_all, aes(x = datetimes, y = hamatop)) +
-  geom_point(color = "#00AFBB", size = .5)
+  geom_point(aes(color=height_bins), size = .5) + 
+  labs(title = "Incident PAR Over Time", x = "Days")
 
 ggplot(data = data_all, aes(x = datetimes, y = hamabot))+
-  geom_point(aes(color=height_bins), size = .5)
+  geom_point(aes(color=height_bins), size = .5) + 
+  labs(title = "Reflected PAR Over Time", x = "Days")
 
 
-#lets look at dates for the last two: we're choosing may 20th because 
+maytwenty = data_all %>% filter(day(datetimes) == 20 & month(datetimes) == 5 & hour(datetimes) == 12 ) 
 
-maytwenty = data_all %>% filter(day(datetimes) == 20 & month(datetimes) == 05) 
+ggplot(data = maytwenty, aes(x = datetimes, y = humid_temp)) +
+  geom_point(aes(color=height_bins), size = 1) + 
+  labs(title = "Temperature Over 1 Hour On May 20th", x = "Days")
+
+ggplot(data = maytwenty, aes(x = datetimes, y = humid_adj)) +
+  geom_point(aes(color=height_bins), size = 1)+
+  labs(title = "Relative Humidity Over 1 Hour On May 20th", x = "Days")
 
 ggplot(data = maytwenty, aes(x = datetimes, y = hamatop)) +
-  geom_point(color = "#00AFBB", size = .5)
+  geom_point(aes(color=height_bins), size = 1)+
+  labs(title = "Incident PAR Over 1 Hour On May 20th", x = "Days")
 
 ggplot(data = maytwenty, aes(x = datetimes, y = hamabot)) +
-  geom_point(color = "#00AFBB", size = .5)
+  geom_point(aes(color=height_bins), size = 1)+
+  labs(title = "Reflected PAR Over 1 Hour On May 20th", x = "Days")
+
 ```
 
 ### d)
 
 ```{r}
-pca_prcomp <- prcomp(data_all %>% select(-Tree, -Direc, -datetimes) %>% na.omit(), scale. = TRUE, center = TRUE)
+pca_prcomp <- prcomp(data_all %>% 
+              select(-epoch, -Tree, -Direc, -datetimes,
+                     -height_bins, -depth_bins) %>%
+                na.omit(), scale. = TRUE, center = TRUE)
 
 
 summary(pca_prcomp)
-
 eigenvalues <- pca_prcomp$sdev**2
 
-plot(1:length(eigenvalues), eigenvalues/sum(eigenvalues), type = "l", main = "Screeplot", xlab = "Number of PCs")
+plot(1:length(eigenvalues), eigenvalues/sum(eigenvalues), type = "l", main = "Screeplot", xlab = "Number of PCs", ylab = "Proportion of Variance Retained")
 
 points(1:length(eigenvalues), eigenvalues/sum(eigenvalues))
-
-
 length(which(eigenvalues >= mean(eigenvalues)))
-
-
 ```
 
 # 4 Interesting Findings
@@ -216,201 +234,94 @@ fviz_cluster(model,data=tree.clust[,c('hamatop','humid_temp')])
 #### a)
 
 ```{r}
-hist(data_all$humid_temp)
+ggplot(data_all,aes(x=log(humid_temp))) +
+  geom_histogram(fill="#859168", color="#859168", alpha=0.9) +
+  labs(title="Log-Transformation of Temperature")
 
-hist(data_all$humid_adj)
+ggplot(data_all,aes(x=log(humid_adj))) +
+  geom_histogram(fill="#859168", color="#859168", alpha=0.9) +
+  labs(title="Log-transformation of Humidity")
 
-#hist(log(data_all$hamatop))
-
-#hist(log(data_all$hamabot))
-
-
-
-ggplot(data_all,aes(x=log(hamatop))) + 
-
-  geom_histogram(fill="#859168", color="#859168", alpha=0.9) + 
-
+ggplot(data_all,aes(x=log(hamatop))) +
+  geom_histogram(fill="#859168", color="#859168", alpha=0.9) +
   labs(title="Log-transformation of Incident PAR")
 
-
-
-ggplot(data_all,aes(x=log(hamabot))) + 
-
-  geom_histogram(fill="#859168", color="#859168", alpha=0.9) + 
-
+ggplot(data_all,aes(x=log(hamabot))) +
+  geom_histogram(fill="#859168", color="#859168", alpha=0.9) +
   labs(title="Log-transformation of Reflected PAR")
-
-
-
-#another chunk
-
-#bad
-
-data_all %>% 
-
-  ggplot(aes(x = humid_temp, y = factor(Height))) +
-
-  geom_boxplot() + 
-
-  labs(title = "Temperature",
-
-       x = "temperature",
-
-       y = "Node Height")
-
-
-
-#our fix (Def not better)
-
-forplotting = data_all %>%
-
-  group_by(Height) %>%
-
-  summarize(tempmed = median(humid_temp),
-
-            hummed = median(humid_adj),
-
-            hamatopmed = median(hamatop),
-
-            hapabotmed = median(hamabot))
-
-
-
-forplotting %>% 
-
-  ggplot(aes(x = tempmed, y = factor(Height))) +
-
-  geom_point() + 
-
-  labs(title = "Temperature",
-
-       x = "temperature",
-
-       y = "Node Height")
-
-
-
-forplotting %>% 
-
-  ggplot(aes(x = hummed, y = factor(Height))) +
-
-  geom_point() 
-
-
-
-#median mainly  0
-
-forplotting %>% 
-
-  ggplot(aes(x = hamatopmed, y = factor(Height))) +
-
-  geom_point() 
-
-
-
-#median always 0
-
-forplotting %>% 
-
-  ggplot(aes(x = hapabotmed, y = factor(Height))) +
-
-  geom_point() 
-
-
-
-#for hamatop, hamabot >  0
-
-secondplotting = data_all %>%
-
-  filter(hamatop > 0) %>%
-
-  group_by(Height) %>%
-
-  summarize(hamatopmed = median(hamatop))
-
-
-
-botsecondplotting = data_all %>%
-
-  filter(hamabot > 0) %>%
-
-  group_by(Height) %>%
-
-  summarize(hamabotmed = median(hamabot))
-
-
-
-secondplotting %>%
-
-  ggplot(aes(x = hamatopmed, y = factor(Height))) +
-
-  geom_point() 
-
-
-
-botsecondplotting %>% 
-
-  ggplot(aes(x = hamabotmed, y = factor(Height))) +
-
-  geom_point() 
 ```
 
-(a) Any suggestions for improving the first two plots in Figure 4? Can you distinguish all the colors in these two plots?
+#### b)
 
-    ```{r}
-    #attempt 1
+```{r}
+data_all$height_bins = cut_interval(data_all$Height, 5)
 
-    data_all %>% 
+data_all %>% na.omit() %>%
+  ggplot(aes(x = humid_temp, y = factor(height_bins))) +
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  labs(title = "Temperature",
+    x = "Temperature",
+    y = "Node Height")
 
-      filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
+data_all %>% na.omit() %>%
+  ggplot(aes(x = humid_adj, y = factor(height_bins))) +
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  labs(title = "Humidity",
+    x = "Humidity",
+    y = "Node Height")
+```
 
-      ggplot(aes(x = datetimes, y = humid_temp, col = factor(Height))) +
+#### c)
 
-      geom_line(col = "darkgrey")
+```{r}
+stored = data_all |> 
+  filter(voltage >= 2.4 & voltage <= 5.5) |> 
+  filter(humidity >= 0 & humidity <= 100) |> 
+  filter(humid_temp <= 35)
 
-    #highlight highest node, highlight lowest node
+mayfirst = stored %>% filter(month(datetimes) == 5 & day(datetimes) == 1)
 
+mayfirst %>%
+  ggplot(aes(x = datetimes, y = humid_temp, col = factor(Height))) +
+  geom_line(col = "lightgrey") +
+  geom_line(
+    data = mayfirst %>% filter(Height == 66.5),
+    aes(color = 'highest (66.5m)')) +
+  geom_line(
+    data = mayfirst %>% filter(Height == 12.7),
+    aes(color = 'lowest (12.7m)')) +
+  labs(title = "Temperature Readings Across Tree Node Throughout Day",
+    subtitle = "Data for May 1st",
+    x = "Time of Day",
+    y = "Temperature") +
+  scale_color_manual(name = "Node Height", 
+                     breaks = c("highest (66.5m)", "lowest (12.7m)"),
+                     values = c("lowest (12.7m)" = "darkgreen",
+                                "highest (66.5m)" = "magenta"))
+```
 
+```{r}
+mayfirst %>%
+  ggplot(aes(x = datetimes, y = humid_adj, col = factor(Height))) +
+  geom_line(col = "lightgrey") +
+  geom_line(
+    data = mayfirst %>% filter(Height == 66.5),
+    aes(color = 'highest (66.5m)')) +
+  geom_line(
+    data = mayfirst %>% filter(Height == 12.7),
+    aes(color = 'lowest (12.7m)')) +
+  labs(title = "Humidity Readings Across Tree Node Throughout Day",
+    subtitle = "Data for May 1st",
+    x = "Time of Day",
+    y = "Humidity") +
+  scale_color_manual(name = "Node Height", 
+                     breaks = c("highest (66.5m)", "lowest (12.7m)"),
+                     values = c("lowest (12.7m)" = "darkgreen",
+                                "highest (66.5m)" = "magenta"))
+```
 
-    #attempt 2
+#### d)
 
-    unique(factor(data_all$Height)) #59 levels
-
-    min(na.omit(data_all$Height)) #10.5
-
-    max(na.omit(data_all$Height)) #66.5
-
-
-
-    #TODO: plot again
-
-
-
-    #relative humidity replica
-
-    data_all %>% 
-
-      filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
-
-      ggplot(aes(x = datetimes, y = humid_adj, col = factor(Height))) +
-
-      geom_line(col = 5)
-
-    #highlight highest node, highlight lowest node
-
-
-
-    #attempt 2 - only 1 height
-
-    data_all %>% 
-
-      filter(month(datetimes) == 5 & day(datetimes) == 1) %>%
-
-      filter(Height == 47) %>% #around median height
-
-      ggplot(aes(x = datetimes, y = humid_adj)) +
-
-      geom_line()
-    ```
-
-(b) Comment on Figure 7. Is it possible to generate a better visualization to highlight the difference between network and log data?
+```{r}
+#deal with original dataset?
+```
