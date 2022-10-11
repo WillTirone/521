@@ -83,6 +83,10 @@ location_data = read.table('data/mote-location-data.txt',header=TRUE)
 data_all = dplyr::left_join(data_all,location_data,by=c('nodeid' = 'ID'))
 cat("Number of total variables in new df : ",dim(data_all)[2])
 stored = data_all
+
+# adding day and night categorical variable 
+data_all$day_or_night = ifelse((hour(data_all$datetimes)>7 & hour(data_all$datetimes)<19),"Day","Night")
+
 ```
 
 ### d) Outlier Rejection
@@ -112,8 +116,6 @@ data_all = data_all |>
 
 ```
 
-*(e) (Bonus) Discuss other possible outliers and explain your reason why it is better to remove them than to keep them.*
-
 # 3 Data Exploration
 
 #### *(a) Make some pairwise scatterplots of some variables. Pick a reasonable time period. Explain your choice and describe your findings.*
@@ -135,12 +137,17 @@ dplot + facet_wrap(~depth_bins,nrow=2)
 ```
 
 ```{r}
-names(data_all)
-ggplot(data = data_all %>% filter(hamatop >0, hamabot >0), aes(x = hamatop, y = hamabot)) +
-  geom_point(size = 0.1)  + facet_wrap(~height_bins,nrow=2)
 
+# try to color by day and night hours 
 ggplot(data = data_all, aes(x = humid_temp, y = humid_adj)) +
-  geom_point(size = 0.05, col = 4)
+  geom_point(aes(color=day_or_night), alpha=.5,size=1)
+
+ggplot(data = data_all, aes(x = voltage, y = hamatop)) +
+  geom_point(aes(color=day_or_night))
+```
+
+```{r}
+
 ```
 
 #### *(b) Are any of the predictors associated with Incident PAR? If so, explain the relationship.*
