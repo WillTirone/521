@@ -120,22 +120,15 @@ data_all = data_all |>
 
 # 3 Data Exploration
 
-#### *(a) Make some pairwise scatterplots of some variables. Pick a reasonable time period. Explain your choice and describe your findings.*
+#### *(a)* 
 
 ```{r}
 # create discrete bins to plot with later
 data_all$height_bins = cut_interval(data_all$Height,3)
 
-# generating facet plots 
-plot = ggplot(data_all, aes(x=hamatop,y=hamabot)) + geom_point(size = .1,alpha=.2) 
-plot + facet_wrap(~height_bins,nrow=2)
-
 # try using depth as a discrete bin 
 data_all$depth_bins = cut_interval(data_all$depth,10)
 
-# plot for depth
-dplot = ggplot(data_all, aes(x=hamatop,y=humid_temp)) + geom_point(size = .1,alpha=.2) 
-dplot + facet_wrap(~depth_bins,nrow=2)
 ```
 
 ```{r}
@@ -506,7 +499,7 @@ ggplot(data_all,aes(x=log(hamabot))) +
 
 #### b)
 
-```{#pt5}
+``` {#pt5}
 
 data_all$height_bins = cut_interval(data_all$Height, 5)
 
@@ -656,6 +649,30 @@ mayfirst %>%
                      breaks = c("highest (66.5m)", "lowest (12.7m)"),
                      values = c("lowest (12.7m)" = "darkgreen",
                                 "highest (66.5m)" = "magenta"))
+```
+
+```{r}
+timestamp = mayfirst %>% filter(epoch == 1062) %>% mutate(East = ifelse(Direc == "E", "East", "not East")) %>% na.omit()
+
+timestamp %>%
+  ggplot(aes(x = humid_temp, y = Height, col = East)) +
+  geom_point(shape = 2) +
+  geom_smooth(col = "darkgreen", se = F, size = 0.5, alpha = 0.5) +
+  labs(title = "Instantaneous Temperature Reading Across Tree Node",
+    subtitle = "TimeStamp: May 1st, 2004 at 09:35:00",
+    y = "Node Height",
+    x = "Temperature (°C)",
+    col = "Node Direction")
+
+timestamp %>%
+  ggplot(aes(x = humid_adj, y = Height, col = East)) +
+  geom_point(shape = 2) +
+  geom_smooth(col = "darkgreen", se = F, size = 0.5, alpha = 0.5) +
+  labs(title = "Instantaneous Humidity Reading Across Tree Node",
+    subtitle = "TimeStamp: May 1st, 2004 at 09:35:00",
+    y = "Node Height",
+    x = "Humidity (%RH)",
+    col = "Node Direction")
 ```
 
 ```{r}
