@@ -3,6 +3,7 @@ title: "Project 1 Redwood Data Report"
 author: William Tirone (2774025) and Natalie Smith (2819547)
 format: pdf
 editor: visual
+---gi
 ---
 
 ```{r,echo=FALSE,message = FALSE, warning = FALSE}
@@ -120,7 +121,7 @@ data_all = data_all |>
 
 # 3 Data Exploration
 
-#### *(a)* 
+#### *(a)*
 
 ```{r}
 # create discrete bins to plot with later
@@ -194,10 +195,12 @@ ggplot(data = maytwenty, aes(x = datetimes, y = hamabot)) +
 ### d)
 
 ```{r}
+
 pca_prcomp <- prcomp(data_all %>% 
               select(-epoch, -Tree, -Direc, -datetimes,
-                     -height_bins, -depth_bins) %>%
+                     -height_bins, -depth_bins,-day_or_night) %>%
                 na.omit(), scale. = TRUE, center = TRUE)
+
 fviz_pca(pca_prcomp, axes = c(1, 2), label = "var")
 
 summary(pca_prcomp)
@@ -242,237 +245,237 @@ fviz_silhouette(sil)
 
 may31 = data_all %>% na.omit() %>%
 
-filter(month(datetimes) == 5 & day(datetimes) == 31) %>%
-
-filter(Height == max(Height) | Height == min(Height))
+  filter(month(datetimes) == 5 & day(datetimes) == 31) %>%
+  
+  filter(Height == max(Height) | Height == min(Height))
 
 june1 = data_all %>% na.omit() %>%
 
-filter(month(datetimes) == 6 & day(datetimes) == 1) %>%
-
-filter(Height == max(Height) | Height == min(Height))
+  filter(month(datetimes) == 6 & day(datetimes) == 1) %>%
+  
+  filter(Height == max(Height) | Height == min(Height))
 
 june2 = data_all %>% na.omit() %>%
 
-filter(month(datetimes) == 6 & day(datetimes) == 2) %>%
-
-filter(Height == max(Height) | Height == min(Height))
+  filter(month(datetimes) == 6 & day(datetimes) == 2) %>%
+  
+  filter(Height == max(Height) | Height == min(Height))
 
 june3 = data_all %>% na.omit() %>%
 
-filter(month(datetimes) == 6 & day(datetimes) == 3) %>%
-
-filter(Height == max(Height) | Height == min(Height))
+  filter(month(datetimes) == 6 & day(datetimes) == 3) %>%
+  
+  filter(Height == max(Height) | Height == min(Height))
 
 #subsetting
 
 may31 = may31 %>%
 
-group_by(datetimes) %>%
-
-mutate(difference_temp =
-
-humid_temp[Height == max(may31$Height)] -
-
-humid_temp[Height == min(may31$Height)]) %>%
-
-mutate(difference_hum =
-
-humid_adj[Height == max(may31$Height)] -
-
-humid_adj[Height == min(may31$Height)]) %>%
-
-mutate(difference_hamatop =
-
-hamatop[Height == max(may31$Height)] -
-
-hamatop[Height == min(may31$Height)]) %>%
-
-mutate(difference_hamabot =
-
-hamabot[Height == max(may31$Height)] -
-
-hamabot[Height == min(may31$Height)])
+  group_by(datetimes) %>%
+  
+  mutate(difference_temp =
+  
+  humid_temp[Height == max(may31$Height)] -
+  
+  humid_temp[Height == min(may31$Height)]) %>%
+  
+  mutate(difference_hum =
+  
+  humid_adj[Height == max(may31$Height)] -
+  
+  humid_adj[Height == min(may31$Height)]) %>%
+  
+  mutate(difference_hamatop =
+  
+  hamatop[Height == max(may31$Height)] -
+  
+  hamatop[Height == min(may31$Height)]) %>%
+  
+  mutate(difference_hamabot =
+  
+  hamabot[Height == max(may31$Height)] -
+  
+  hamabot[Height == min(may31$Height)])
 
 june1 = june1 %>%
 
-group_by(datetimes) %>%
-
-mutate(difference_temp =
-
-humid_temp[Height == max(june1$Height)] -
-
-humid_temp[Height == min(june1$Height)]) %>%
-
-mutate(difference_hum =
-
-humid_adj[Height == max(june1$Height)] -
-
-humid_adj[Height == min(june1$Height)]) %>%
-
-mutate(difference_hamatop =
-
-hamatop[Height == max(june1$Height)] -
-
-hamatop[Height == min(june1$Height)]) %>%
-
-mutate(difference_hamabot =
-
-hamabot[Height == max(june1$Height)] -
-
-hamabot[Height == min(june1$Height)])
+  group_by(datetimes) %>%
+  
+  mutate(difference_temp =
+  
+  humid_temp[Height == max(june1$Height)] -
+  
+  humid_temp[Height == min(june1$Height)]) %>%
+  
+  mutate(difference_hum =
+  
+  humid_adj[Height == max(june1$Height)] -
+  
+  humid_adj[Height == min(june1$Height)]) %>%
+  
+  mutate(difference_hamatop =
+  
+  hamatop[Height == max(june1$Height)] -
+  
+  hamatop[Height == min(june1$Height)]) %>%
+  
+  mutate(difference_hamabot =
+  
+  hamabot[Height == max(june1$Height)] -
+  
+  hamabot[Height == min(june1$Height)])
 
 june2 = june2 %>%
 
-group_by(datetimes) %>%
-
-mutate(difference_temp =
-
-humid_temp[Height == max(june2$Height)] -
-
-humid_temp[Height == min(june2$Height)]) %>%
-
-mutate(difference_hum =
-
-humid_adj[Height == max(june2$Height)] -
-
-humid_adj[Height == min(june2$Height)]) %>%
-
-mutate(difference_hamatop =
-
-hamatop[Height == max(june2$Height)] -
-
-hamatop[Height == min(june2$Height)]) %>%
-
-mutate(difference_hamabot =
-
-hamabot[Height == max(june2$Height)] -
-
-hamabot[Height == min(june2$Height)])
+  group_by(datetimes) %>%
+  
+  mutate(difference_temp =
+  
+  humid_temp[Height == max(june2$Height)] -
+  
+  humid_temp[Height == min(june2$Height)]) %>%
+  
+  mutate(difference_hum =
+  
+  humid_adj[Height == max(june2$Height)] -
+  
+  humid_adj[Height == min(june2$Height)]) %>%
+  
+  mutate(difference_hamatop =
+  
+  hamatop[Height == max(june2$Height)] -
+  
+  hamatop[Height == min(june2$Height)]) %>%
+  
+  mutate(difference_hamabot =
+  
+  hamabot[Height == max(june2$Height)] -
+  
+  hamabot[Height == min(june2$Height)])
 
 june3 = june3 %>%
 
-group_by(datetimes) %>%
-
-mutate(difference_temp =
-
-humid_temp[Height == max(june3$Height)] -
-
-humid_temp[Height == min(june3$Height)]) %>%
-
-mutate(difference_hum =
-
-humid_adj[Height == max(june3$Height)] -
-
-humid_adj[Height == min(june3$Height)]) %>%
-
-mutate(difference_hamatop =
-
-hamatop[Height == max(june3$Height)] -
-
-hamatop[Height == min(june3$Height)]) %>%
-
-mutate(difference_hamabot =
-
-hamabot[Height == max(june3$Height)] -
-
-hamabot[Height == min(june3$Height)])
+  group_by(datetimes) %>%
+  
+  mutate(difference_temp =
+  
+  humid_temp[Height == max(june3$Height)] -
+  
+  humid_temp[Height == min(june3$Height)]) %>%
+  
+  mutate(difference_hum =
+  
+  humid_adj[Height == max(june3$Height)] -
+  
+  humid_adj[Height == min(june3$Height)]) %>%
+  
+  mutate(difference_hamatop =
+  
+  hamatop[Height == max(june3$Height)] -
+  
+  hamatop[Height == min(june3$Height)]) %>%
+  
+  mutate(difference_hamabot =
+  
+  hamabot[Height == max(june3$Height)] -
+  
+  hamabot[Height == min(june3$Height)])
 
 #plotting temperature
 
 may31 %>%
 
-ggplot(aes(x = datetimes, y = difference_temp)) +
-
-geom_line(data = may31, col = "darkgreen") +
-
-geom_line(data = june1, col = "darkgreen") +
-
-geom_line(data = june2, col = "darkgreen") +
-
-geom_line(data = june3, col = "darkgreen") +
-
-geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
-
-labs(title = "Difference in Temperature",
-
-subtitle = "Top of tree is generally hotter than the bottom",
-
-y = "Difference in temperature",
-
-x = "Date")
+  ggplot(aes(x = datetimes, y = difference_temp)) +
+  
+  geom_line(data = may31, col = "darkgreen") +
+  
+  geom_line(data = june1, col = "darkgreen") +
+  
+  geom_line(data = june2, col = "darkgreen") +
+  
+  geom_line(data = june3, col = "darkgreen") +
+  
+  geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
+  
+  labs(title = "Difference in Temperature",
+  
+  subtitle = "Top of tree is generally hotter than the bottom",
+  
+  y = "Difference in temperature",
+  
+  x = "Date")
 
 #plotting humidity
 
 may31 %>%
 
-ggplot(aes(x = datetimes, y = difference_hum)) +
-
-geom_line(data = may31, col = "darkgreen") +
-
-geom_line(data = june1, col = "darkgreen") +
-
-geom_line(data = june2, col = "darkgreen") +
-
-geom_line(data = june3, col = "darkgreen") +
-
-geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
-
-labs(title = "Difference in Relative Humidity",
-
-subtitle = "Top of tree is generally less humid than the bottom",
-
-y = "Difference in relative humidity",
-
-x = "Date")
+  ggplot(aes(x = datetimes, y = difference_hum)) +
+  
+  geom_line(data = may31, col = "darkgreen") +
+  
+  geom_line(data = june1, col = "darkgreen") +
+  
+  geom_line(data = june2, col = "darkgreen") +
+  
+  geom_line(data = june3, col = "darkgreen") +
+  
+  geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
+  
+  labs(title = "Difference in Relative Humidity",
+  
+  subtitle = "Top of tree is generally less humid than the bottom",
+  
+  y = "Difference in relative humidity",
+  
+  x = "Date")
 
 #plotting Incident PAR
 
 may31 %>%
 
-ggplot(aes(x = datetimes, y = difference_hamatop)) +
-
-geom_line(data = may31, col = "darkgreen") +
-
-geom_line(data = june1, col = "darkgreen") +
-
-geom_line(data = june2, col = "darkgreen") +
-
-geom_line(data = june3, col = "darkgreen") +
-
-geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
-
-labs(title = "Difference in Incident PAR",
-
-subtitle = "Top of tree generally receives more direct sunlight than bottom",
-
-y = "Difference in Incident PAR",
-
-x = "Date")
+  ggplot(aes(x = datetimes, y = difference_hamatop)) +
+  
+  geom_line(data = may31, col = "darkgreen") +
+  
+  geom_line(data = june1, col = "darkgreen") +
+  
+  geom_line(data = june2, col = "darkgreen") +
+  
+  geom_line(data = june3, col = "darkgreen") +
+  
+  geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
+  
+  labs(title = "Difference in Incident PAR",
+  
+  subtitle = "Top of tree generally receives more direct sunlight than bottom",
+  
+  y = "Difference in Incident PAR",
+  
+  x = "Date")
 
 #plotting Reflected PAR
 
 may31 %>%
 
-ggplot(aes(x = datetimes, y = difference_hamabot)) +
-
-geom_line(data = may31, col = "darkgreen") +
-
-geom_line(data = june1, col = "darkgreen") +
-
-geom_line(data = june2, col = "darkgreen") +
-
-geom_line(data = june3, col = "darkgreen") +
-
-geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
-
-labs(title = "Difference in Reflected PAR",
-
-subtitle = "Top of tree generally receives more reflected sunlight than bottom",
-
-y = "Difference in Reflected PAR",
-
-x = "Date")
+  ggplot(aes(x = datetimes, y = difference_hamabot)) +
+  
+  geom_line(data = may31, col = "darkgreen") +
+  
+  geom_line(data = june1, col = "darkgreen") +
+  
+  geom_line(data = june2, col = "darkgreen") +
+  
+  geom_line(data = june3, col = "darkgreen") +
+  
+  geom_hline(yintercept=0, linetype = 'dashed', col = 'brown') +
+  
+  labs(title = "Difference in Reflected PAR",
+  
+  subtitle = "Top of tree generally receives more reflected sunlight than bottom",
+  
+  y = "Difference in Reflected PAR",
+  
+  x = "Date")
 ```
 
 # 5 Graph Critique
@@ -499,7 +502,7 @@ ggplot(data_all,aes(x=log(hamabot))) +
 
 #### b)
 
-``` {#pt5}
+```{r}
 
 data_all$height_bins = cut_interval(data_all$Height, 5)
 
@@ -507,59 +510,57 @@ data_all$height_bins = cut_interval(data_all$Height, 5)
 
 p1 = data_all %>% na.omit() %>%
 
-ggplot(aes(x = humid_temp, y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Temperature",
-
-x = "Temperature",
-
-y = "Node Height")
+  ggplot(aes(x = humid_temp, y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Temperature",
+  
+  x = "Temperature",
+  
+  y = "Node Height")
 
 #c2
 
 p2 = data_all %>% na.omit() %>%
 
-ggplot(aes(x = humid_adj, y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Humidity",
-
-x = "Humidity",
-
-y = "Node Height")
+  ggplot(aes(x = humid_adj, y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Humidity",
+  
+  x = "Humidity",
+  
+  y = "Node Height")
 
 #c3
 
 p3 = data_all %>% na.omit() %>% filter(hamatop > 0) %>%
 
-ggplot(aes(x = hamatop, y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Incident PAR",
-
-x = "Incident PAR",
-
-y = "Node Height")
+  ggplot(aes(x = hamatop, y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Incident PAR",
+  
+  x = "Incident PAR",
+  
+  y = "Node Height")
 
 #c4
 
 p4 = data_all %>% na.omit() %>% filter(hamabot > 0) %>%
 
-ggplot(aes(x = hamabot, y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Reflected PAR",
-
-x = "Reflected PAR",
-
-y = "Node Height")
-
-library(patchwork)
+  ggplot(aes(x = hamabot, y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Reflected PAR",
+  
+  x = "Reflected PAR",
+  
+  y = "Node Height")
 
 p1 + p2 + p3 + p4 + plot_annotation(title = "Distribution of Sensor Readings")
 
@@ -567,57 +568,57 @@ p1 + p2 + p3 + p4 + plot_annotation(title = "Distribution of Sensor Readings")
 
 d1 = data_all %>% na.omit() %>%
 
-ggplot(aes(x = humid_temp - mean(humid_temp), y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Temperature",
-
-x = "Temperature",
-
-y = "Node Height")
+  ggplot(aes(x = humid_temp - mean(humid_temp), y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Temperature",
+  
+  x = "Temperature",
+  
+  y = "Node Height")
 
 #d2
 
 d2 = data_all %>% na.omit() %>%
 
-ggplot(aes(x = humid_adj - mean(humid_adj), y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Humidity",
-
-x = "Humidity",
-
-y = "Node Height")
+  ggplot(aes(x = humid_adj - mean(humid_adj), y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Humidity",
+  
+  x = "Humidity",
+  
+  y = "Node Height")
 
 #d3
 
 d3 = data_all %>% na.omit() %>% filter(hamatop > 0) %>%
 
-ggplot(aes(x = hamatop - mean(hamatop), y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Incident PAR",
-
-x = "Incident PAR",
-
-y = "Node Height")
+  ggplot(aes(x = hamatop - mean(hamatop), y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Incident PAR",
+  
+  x = "Incident PAR",
+  
+  y = "Node Height")
 
 #d4
 
 d4 = data_all %>% na.omit() %>% filter(hamabot > 0) %>%
 
-ggplot(aes(x = hamabot - mean(hamabot), y = factor(height_bins))) +
-
-geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
-
-labs(title = "Reflected PAR",
-
-x = "Reflected PAR",
-
-y = "Node Height")
+  ggplot(aes(x = hamabot - mean(hamabot), y = factor(height_bins))) +
+  
+  geom_boxplot(col = "darkgreen", outlier.size = 0.2) +
+  
+  labs(title = "Reflected PAR",
+  
+  x = "Reflected PAR",
+  
+  y = "Node Height")
 
 d1+ d2 + d3 + d4 + plot_annotation(title = "Distribution of Sensor Reading Differences from Mean")
 ```
@@ -716,7 +717,7 @@ yield_df$measure = ifelse(is.na(yield_df$humidity),0,1)
 yield_df$height_bins = cut_interval(yield_df$Height, 3)
 
 no_measure = yield_df |> filter(measure==0)
-dim(no_measure)
+
 #box plot 
 yield_df |>
   ggplot(aes(x = humid_adj, y = factor(height_bins))) +
