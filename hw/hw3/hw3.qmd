@@ -4,6 +4,18 @@ author: "William Tirone"
 format: pdf
 ---
 
+# The Honor Code 
+
+::: callout-important
+\(a\) Please state the names of people who you worked with for this homework. You can also provide your comments about the homework here.
+
+*Eli Gnesin, Natalie Smith, Tommy Misikoff, Alonso Guererro*
+
+\(b\) Please type/write the following sentences yourself and sign at the end. We want to make it extra clear that nobody cheats even unintentionally.
+
+*I hereby state that all of my solutions were entirely in my words and were written by me. I have not looked at another student's solutions and I have fairly credited all external sources in this write up.*
+:::
+
 # Q1
 
 1.1
@@ -15,7 +27,7 @@ format: pdf
 1.2
 
 ::: {.callout-note appearance="minimal" icon="false"}
-**FALSE.** We don't necessarily know what will happen to test error. (?)
+**FALSE.** We don't necessarily know what will happen to test error.
 :::
 
 1.3
@@ -56,7 +68,7 @@ format: pdf
 
 # Q2
 
-### 2.2
+## 2.1
 
 $$
 soft(a,1) = sign(a)(|a| - 1)_+
@@ -70,19 +82,20 @@ vals = sign(a) * (abs(a) - 1)
 
 plot(a,vals,type='l')
 ```
+\newpage
 
 # Q3
 
 ```{r echo=FALSE}
+suppressPackageStartupMessages({
 library(ggplot2)
 library(GGally)
 library(caret)
-#install.packages("fastDummies")
+library(tidyverse)
 library(fastDummies)
 library(glmnet)
+})
 ```
-
-Stock project code to get started and create AmesTiny
 
 ```{r echo=FALSE}
 Ames <- read.delim("AmesHousing.txt", header = TRUE, sep = "\t", dec = ".")
@@ -154,7 +167,7 @@ any(is.na(AmesTinyTest))
 
 ### 3.1.3
 
-Does not look like there is collinearity.
+It does not look like there is collinearity.
 
 ```{r}
 v = continuousVar[1:5]
@@ -190,11 +203,10 @@ Xnames <- c(X_Areas, X_SFs, X_Porches,
 Xname_stops <- c(5, 12, 15, 20, 23, 28, 38, 45, 59, 62, 68)
 ```
 
-Fitting the lm
+Fitting the lm:
 
 ```{r}
 models = c()
-test_models = c()
 
 for (i in 1:11) {
     fit <- lm(reformulate(Xnames[1:Xname_stops[i]], 
@@ -206,7 +218,7 @@ for (i in 1:11) {
 
 ### 3.2.1
 
-Function for MSE
+Function for MSE:
 
 ```{r}
 
@@ -218,7 +230,7 @@ MSE = function(y,X,B) {
 
 ### 3.2.2
 
-Function for R2
+Function for R2:
 
 ```{r}
 
@@ -361,7 +373,7 @@ ggplot() +
 
 ### 3.4.1
 
-```{r}
+```{r,warning=FALSE}
 set.seed(10)
 folds <- createFolds(AmesTinyTrain$SalePrice, k = 5)
 
@@ -390,9 +402,6 @@ for (i in 1:5){
 ### 3.4.2
 
 ```{r}
-#modelQuality #trainMSE
-#modelQualityTest #testMSE
-#modelQualitySingleVal #singleValMSE
 
 # column sums to get mse_cv
 cv_frame |> mutate(mse_cv = rowSums(cv_frame)/5)
@@ -432,25 +441,198 @@ ggplot() +
 AmesTiny = dummy_cols(AmesTiny,
                       select_columns = c("Overall.Qual","Exter.Qual",
                                          "Bsmt.Qual", "Kitchen.Qual", 
-                                         "Garage.Qual"),
+                                         "Garage.Qual", "Heating.QC",
+                                         "Foundation"),
                       remove_selected_columns = TRUE,
                       remove_first_dummy = TRUE)
 
 # fitting the ridge model 
-ridge_model <- glmnet(x=AmesTiny, 
+ridge_model <- glmnet(x=subset(AmesTiny, select=-c(SalePrice)), 
               y=log(AmesTiny$SalePrice+1),
               family="gaussian",
               standardize = TRUE,
               alpha=0,
               lambda = 1)
-
 ```
 
 ### 3.5.2
 
+The model that achieves the smallest MSE in this case, for both CV-MSE and trainMSE, has the smallest lambda value = 0.1.
+
 ```{r}
-# initializing the data frame for ridge and adding lambdas to iterate 
-ridge_mse = data.frame(matrix(NA,nrow=12,3))
-colnames(ridge_mse) = c("lambdas","trainMSE","CVMSE")
-ridge_mse$lambdas = seq(0.1,1000,length.out = 12)
+
+# setting up vars to use later 
+lambdas = seq(0.1,1000,length.out = 12)
+  
+# Code to create CV-MSE for Ridge
+set.seed(12)
+folds <- createFolds(AmesTiny$SalePrice, k = 5)
+ridge_cv_frame = data.frame(matrix(nrow=12,ncol=5))
+colnames(ridge_cv_frame) = c("Fold1","Fold2","Fold3","Fold4","Fold5")
+
+# resuing code from previous CV 
+for (i in 1:5){
+  
+  set = AmesTiny[folds[[i]],]
+  y_set = log(set$SalePrice+1)
+  
+  ridge_mse_cv = c()
+  
+  for (j in lambdas) {
+    fit <- glmnet(x=subset(set, select=-c(SalePrice)), 
+                  y=y_set,
+                  family="gaussian",
+                  standardize = TRUE,
+                  alpha=0,
+                  lambda = j)
+    
+    ridge_mse_cv = c(ridge_mse_cv, 
+                     mean((y_set - predict(fit, 
+                                           as.matrix(subset(set,select=-c(SalePrice)))))^2))
+  }
+  
+  ridge_cv_frame[,i] = ridge_mse_cv
+}
+
+# this column will be plotted as CV-MSE-Ridge
+ridge_cv_frame |> mutate(ridge_mse_cv = rowSums(ridge_cv_frame)/5)
+ridge_cv_frame$lambdas = lambdas
+
+
+```
+
+```{r}
+# fitting the models to calc. training MSE 
+
+ridge_mse = c()
+
+for (i in lambdas) {
+    fit <- glmnet(x=subset(AmesTiny, select=-c(SalePrice)), 
+                  y=log(AmesTiny$SalePrice+1),
+                  family="gaussian",
+                  standardize = TRUE,
+                  alpha=0,
+                  lambda = i)
+
+    ridge_mse = c(ridge_mse, mean((log(AmesTiny$SalePrice+1) - predict(fit, as.matrix(subset(AmesTiny, select=-c(SalePrice)))))^2))
+}
+
+#putting in df to plot 
+ridge_mse = data.frame(lambdas, ridge_mse)
+
+colors=c("train" = "red", "CV" = "blue")
+
+# plotting train vs. CV-MSE
+ggplot() + 
+  geom_line(data=ridge_mse, aes(x=lambdas,y=ridge_mse,color="train")) + 
+  geom_line(data=ridge_cv_frame, aes(x=lambdas,y=ridge_mse_cv, color="CV")) +
+  ylab("MSE") + 
+  scale_color_manual(values=colors)
+
+```
+
+## 3.6
+
+```{r}
+
+# setting up vars to use later 
+lambdas = seq(0.1,1000,length.out = 12)
+  
+# Code to create CV-MSE for lasso
+set.seed(12)
+folds <- createFolds(AmesTiny$SalePrice, k = 5)
+lasso_cv_frame = data.frame(matrix(nrow=12,ncol=5))
+colnames(lasso_cv_frame) = c("Fold1","Fold2","Fold3","Fold4","Fold5")
+
+# resuing code from previous CV 
+for (i in 1:5){
+  
+  set = AmesTiny[folds[[i]],]
+  y_set = log(set$SalePrice+1)
+  
+  lasso_mse_cv = c()
+  
+  for (j in lambdas) {
+    fit <- glmnet(x=subset(set, select=-c(SalePrice)), 
+                  y=y_set,
+                  family="gaussian",
+                  standardize = TRUE,
+                  alpha=1,
+                  lambda = j)
+    
+    lasso_mse_cv = c(lasso_mse_cv, 
+                     mean((y_set - predict(fit, 
+                                           as.matrix(subset(set,select=-c(SalePrice)))))^2))
+  }
+  
+  lasso_cv_frame[,i] = lasso_mse_cv
+}
+
+# this column will be plotted as CV-MSE-lasso
+lasso_cv_frame |> mutate(lasso_mse_cv = rowSums(lasso_cv_frame)/5)
+lasso_cv_frame$lambdas = lambdas
+
+lasso_mse = c()
+
+for (i in lambdas) {
+    fit <- glmnet(x=subset(AmesTiny, select=-c(SalePrice)), 
+                  y=log(AmesTiny$SalePrice+1),
+                  family="gaussian",
+                  standardize = TRUE,
+                  alpha=1,
+                  lambda = i)
+
+    lasso_mse = c(lasso_mse, mean((log(AmesTiny$SalePrice+1) - predict(fit, as.matrix(subset(AmesTiny, select=-c(SalePrice)))))^2))
+}
+
+#putting in df to plot 
+lasso_mse = data.frame(lambdas, lasso_mse)
+
+colors=c("train" = "red", "CV" = "blue")
+
+# plotting train vs. CV-MSE
+ggplot() + 
+  geom_line(data=lasso_mse, aes(x=lambdas,y=lasso_mse,color="train")) + 
+  geom_line(data=lasso_cv_frame, aes(x=lambdas,y=lasso_mse_cv, color="CV")) +
+  ylab("MSE") + 
+  scale_color_manual(values=colors)
+
+```
+
+## 3.7
+
+```{r}
+fit <- glmnet(x=subset(AmesTiny, select=-c(SalePrice)), 
+              y=log(AmesTiny$SalePrice+1),
+              family="gaussian",
+              standardize = TRUE,
+              alpha=0, # ridge = 0 
+              lambda = 0.1)
+
+beta_mat_ridge = as.matrix(abs(fit$beta)) # taking absolute values 
+
+beta_mat_ridge = beta_mat_ridge[order(beta_mat_ridge[,1],decreasing=TRUE),]
+beta_ridge = data.frame(beta_mat_ridge[0:10])
+
+ggplot() + 
+  geom_col(data=beta_ridge, aes(x=rownames(beta_ridge), y=beta_ridge[,1])) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=.3))
+```
+
+```{r}
+fit <- glmnet(x=subset(AmesTiny, select=-c(SalePrice)), 
+              y=log(AmesTiny$SalePrice+1),
+              family="gaussian",
+              standardize = TRUE,
+              alpha=1,
+              lambda = 0.1)
+
+beta_mat_lasso = as.matrix(abs(fit$beta)) # taking absolute values 
+
+beta_mat_lasso = beta_mat_lasso[order(beta_mat_lasso[,1],decreasing=TRUE),]
+beta_lasso = data.frame(beta_mat_lasso[0:10])
+
+ggplot() + 
+  geom_col(data=beta_lasso, aes(x=rownames(beta_lasso), y=beta_lasso[,1])) + 
+  theme(axis.text.x = element_text(angle = 90, vjust = 0.5, hjust=.2))
 ```
