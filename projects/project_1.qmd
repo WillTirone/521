@@ -3,7 +3,6 @@ title: "Project 1 Redwood Data Report"
 author: William Tirone (2774025) and Natalie Smith (2819547)
 format: pdf
 editor: visual
----gi
 ---
 
 ```{r,echo=FALSE,message = FALSE, warning = FALSE}
