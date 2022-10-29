@@ -1,0 +1,218 @@
+---
+title: "521 HW 4"
+author: "William Tirone"
+format: pdf
+---
+
+```{r echo=FALSE, }
+suppressPackageStartupMessages({
+library(tidyverse)
+library(GGally)
+library(MASS)
+library(caret)
+library(e1071)
+library(class)
+})
+
+options(scipen = 999)
+```
+
+# The Honor Code
+
+::: callout-important
+\(a\) Please state the names of people who you worked with for this homework. You can also provide your comments about the homework here.
+
+\(b\) Please type/write the following sentences yourself and sign at the end. We want to make it extra clear that nobody cheats even unintentionally.
+
+*I hereby state that all of my solutions were entirely in my words and were written by me. I have not looked at another student's solutions and I have fairly credited all external sources in this write up.*
+:::
+
+# 1
+
+# 2
+
+## 2.1 (double check)
+
+$$
+\begin{aligned}
+a + v &= O(d)\\
+a^Tv &= O(d + d) = O(d)
+\end{aligned}
+$$
+
+## 2.2
+
+$$
+A+B = O(2(n \times d)) = O(n \times d)
+$$
+
+Space required: If A has all integer elements, it would require 4 bytes \* (n \* d), and if it contains float values, it would require 8 bytes \* (n \* d), since storing an integer requires 4 bytes and a float requires 8. I assume this varies based on hardware / programming language.
+
+## 2.3 (double check)
+
+$$
+Av = O((d + d)n) = O(nd)\\
+$$
+
+First, $A^T = O(n \cdot d)$. Then if
+
+$$
+AB = O(n^2d) 
+$$
+
+## 2.4
+
+https://en.wikipedia.org/wiki/Matrix_chain_multiplication
+
+# 3
+
+# 4 (4.14 ISL)
+
+## a) 
+
+```{r}
+Auto$mpg01 = if_else(Auto$mpg > median(Auto$mpg),1,0)
+```
+
+## b) dummify origin? 
+
+Below, looking at the correlation plot, it seems like all the variables have a strong relationship with mpg01. This makes sense, since every attribute of a car is going to affect its mpg. Year, origin, and acceleration improve MPG, while weight, horsepower, displacement, and cylinders decrease it and make it more likely to fall under the median. Newer cars have better MPG, and heavier cars have worse MPG. The same reasoning applies for the other factors, for physics reasons that I probably don't understand.
+
+```{r}
+# correlate, removing "name" column 
+ggcorr(Auto[,c(-1,-9)])
+```
+
+## c)
+
+```{r}
+# code borrowed here: https://www.statology.org/train-test-split-r/
+set.seed(123)
+sample = sample(c(TRUE, FALSE), nrow(Auto), replace=TRUE, prob=c(0.8,0.2))
+auto.train = Auto[sample, c(-1,-9)]
+auto.test = Auto[!sample, c(-1,-9)]
+```
+
+## d) LDA
+
+Fitting the model on training data
+
+```{r}
+# referencing ISL p. 187
+lda.fit = lda(mpg01 ~ origin + year + acceleration + weight + 
+                horsepower + displacement + cylinders, 
+              data=auto.train)
+lda.fit
+```
+
+Finding test error:
+
+```{r}
+lda.pred = predict(lda.fit, auto.test)
+table(lda.pred$class, auto.test$mpg01) 
+
+cat("LDA test error", 1-mean(lda.pred$class == auto.test$mpg01))
+```
+
+## e) QDA
+
+Fitting the model
+
+```{r}
+# Smarket.2005 is their test set 
+# p. 189 ISL
+qda.fit = qda(mpg01 ~ origin + year + acceleration + weight + 
+                horsepower + displacement + cylinders, 
+              data=auto.train)
+
+qda.fit
+```
+
+Finding QDA test error
+
+```{r}
+qda.pred = predict(qda.fit, auto.test)
+table(qda.pred$class, auto.test$mpg01)
+
+cat("QDA test error", 1-mean(qda.pred$class == auto.test$mpg01))
+```
+
+## f) Logistic Regression
+
+```{r}
+#p. 184
+log.fit = glm(mpg01 ~ origin + year + acceleration + weight + 
+                horsepower + displacement + cylinders, 
+              data=auto.train, 
+              family=binomial)
+summary(log.fit)
+```
+
+Test Error:
+
+```{r}
+
+# first find probabilities using predict and our model 
+log.probs = predict(log.fit, auto.test, type = 'response')
+
+# create vector with zeros for below median MPG and 1's for above median.
+log.pred <- rep(0, 74)
+log.pred[log.probs > .5] = 1
+
+# table output 
+table(log.pred,auto.test$mpg01)
+
+cat("logistic test error : ", 1-mean(log.pred == auto.test$mpg01))
+```
+
+## g) naive Bayes 
+
+```{r}
+nb.fit = naiveBayes(mpg01 ~ origin + year + acceleration + weight + 
+                horsepower + displacement + cylinders, 
+              data=auto.train)
+nb.fit
+```
+
+Test error:
+
+```{r}
+nb.pred = predict(nb.fit, auto.test)
+table(nb.pred, auto.test$mpg01)
+
+cat("Naive Bayes test error", 1-mean(nb.pred == auto.test$mpg01))
+```
+
+## h) KNN 
+
+First, without standardization:
+
+```{r}
+knn.pred.noscale = knn(auto.train, auto.test, auto.train$mpg01, k=3)
+cat("KNN Error Rate : ", 1-mean(knn.pred.noscale == auto.test$mpg01))
+```
+
+Now with standardization, since the variables have very different scales, we get a lower error rate.
+
+```{r}
+standardized.train = scale(auto.train)
+standardized.test = scale(auto.test)
+
+knn.pred = knn(standardized.train, standardized.test, auto.train$mpg01, k=3)
+table(knn.pred, auto.test$mpg01)
+
+cat("KNN Error Rate : ", 1-mean(knn.pred == auto.test$mpg01))
+```
+
+Choosing the best K by iterating through different choices. It looks like around k=3 gives us the lowest test error, without standardization. With standardization, we can see above, it correctly predicted all the responses.
+
+```{r}
+k = 1:50
+test.error = c()
+for (i in k) {
+  knn = knn(auto.train, auto.test, auto.train$mpg01, k=i)
+  test.error = c(test.error,1-mean(knn == auto.test$mpg01))
+}
+
+plot(k, test.error,type='l')
+```
