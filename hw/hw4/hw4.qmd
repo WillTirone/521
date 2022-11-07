@@ -12,6 +12,8 @@ library(MASS)
 library(caret)
 library(e1071)
 library(class)
+library(wordspace)
+library(mclust)
 })
 
 options(scipen = 999)
@@ -29,9 +31,69 @@ options(scipen = 999)
 
 # 1
 
+### 1.1
+
+::: {.callout-note appearance="minimal" icon="false"}
+**TRUE**. The $l_2$ is just a linear regularization term that can be added, also referencing ESL p. 125 eqn. 4.31.
+:::
+
+### 1.2
+
+::: {.callout-note appearance="minimal" icon="false"}
+**TRUE.** The logistic function takes numbers on the real line and maps them to \[0,1\].
+:::
+
+### 1.3
+
+::: {.callout-note appearance="minimal" icon="false"}
+**FALSE**. We do not need to scale (unless we are regularizing). Mentioned in Lecture 14 p. 21.
+:::
+
+### 1.4
+
+::: {.callout-note appearance="minimal" icon="false"}
+**FALSE.** Using maximum likelihood results in $X^T(y-p)$ which has no closed form solution but can be approximated with the Newton-Raphson method.
+:::
+
+### 1.5
+
+::: {.callout-note appearance="minimal" icon="false"}
+**FALSE**. It assumes they come from a Bernoulli distribution.
+:::
+
+### 1.6
+
+::: {.callout-note appearance="minimal" icon="false"}
+**FALSE**. The response variable y must be categorical for logistic regression.
+:::
+
+### 1.7
+
+::: {.callout-note appearance="minimal" icon="false"}
+**FALSE**. It becomes more computationally costly to calculate distances in higher dimensions for the algorithm and the points could become much farther away as we add dimensions.
+:::
+
+### 1.8
+
+::: {.callout-note appearance="minimal" icon="false"}
+**TRUE**. The Bayes' decision boundary is the unachievable best boundary, so LDA will more closely approximate this if it is linear.
+:::
+
+### 1.9
+
+::: {.callout-note appearance="minimal" icon="false"}
+**FALSE**. The Bayes' classifier is not achievable in practice.
+:::
+
+### 1.10
+
+::: {.callout-note appearance="minimal" icon="false"}
+**TRUE.** Adjusting K can increase or decrease the model complexity, which is the x-axis in a bias-variance plot.
+:::
+
 # 2
 
-## 2.1 (double check)
+## 2.1
 
 $$
 \begin{aligned}
@@ -48,33 +110,44 @@ $$
 
 Space required: If A has all integer elements, it would require 4 bytes \* (n \* d), and if it contains float values, it would require 8 bytes \* (n \* d), since storing an integer requires 4 bytes and a float requires 8. I assume this varies based on hardware / programming language.
 
-## 2.3 (double check)
+## 2.3
 
 $$
 Av = O((d + d)n) = O(nd)\\
 $$
 
-First, $A^T = O(n \cdot d)$. Then if
-
 $$
-AB = O(n^2d) 
+A^TB = O(n^2d)
 $$
 
 ## 2.4
 
-https://en.wikipedia.org/wiki/Matrix_chain_multiplication
+Doing this the smarter way, we change the order of multiplication and find $b = Bv = O(n^2)$ then using $A^Tb = O(n^2 + n^2)$ so
+
+$$
+A^TBv = O(n^2)
+$$
+
+However, going the other direction, we end up with:
+
+$$
+\begin{aligned}
+A^TB &= O(n^2d) \\
+A^TBv &= O(n^2d)
+\end{aligned}
+$$
 
 # 3
 
 # 4 (4.14 ISL)
 
-## a) 
+## a)
 
 ```{r}
 Auto$mpg01 = if_else(Auto$mpg > median(Auto$mpg),1,0)
 ```
 
-## b) dummify origin? 
+## b)
 
 Below, looking at the correlation plot, it seems like all the variables have a strong relationship with mpg01. This makes sense, since every attribute of a car is going to affect its mpg. Year, origin, and acceleration improve MPG, while weight, horsepower, displacement, and cylinders decrease it and make it more likely to fall under the median. Newer cars have better MPG, and heavier cars have worse MPG. The same reasoning applies for the other factors, for physics reasons that I probably don't understand.
 
@@ -165,7 +238,7 @@ table(log.pred,auto.test$mpg01)
 cat("logistic test error : ", 1-mean(log.pred == auto.test$mpg01))
 ```
 
-## g) naive Bayes 
+## g) naive Bayes
 
 ```{r}
 nb.fit = naiveBayes(mpg01 ~ origin + year + acceleration + weight + 
@@ -183,7 +256,7 @@ table(nb.pred, auto.test$mpg01)
 cat("Naive Bayes test error", 1-mean(nb.pred == auto.test$mpg01))
 ```
 
-## h) KNN 
+## h) KNN
 
 First, without standardization:
 
@@ -215,4 +288,131 @@ for (i in k) {
 }
 
 plot(k, test.error,type='l')
+```
+
+# 4
+
+hand written, see attached.
+
+# 5
+
+## a)
+
+Though we could standardize the data here, like mentioned in problem 4, I don't think it's necessary since the variables are on fairly similar scales.
+
+```{r}
+knn_predict = function(X_train,X_test,y_train,k){
+  
+  y_test = c()
+  
+  for (i in 1:dim(X_test)[1]){
+    
+    # use this to make matrix of correct dim 
+    one_point = matrix(as.numeric(X_test[i,]),
+                       nrow=dim(X_train)[1],
+                       ncol=4,
+                       byrow=TRUE)
+    
+    # find the row norms and build a new dataframe with labels
+    residuals = data.frame(y_train,
+                       rowNorms(as.matrix(X_train - one_point)))
+    
+    # sorting by distance and pulling out predicted label by maj vote
+    label = majorityVote(arrange(residuals, residuals[,2])[1:k,1])$majority
+    y_test = c(y_test, label)
+  }
+  
+  return(y_test)
+}
+```
+
+## b)
+
+```{r}
+# code from homework 
+library(datasets)
+data(iris)
+training <- c(1:47, 51:97, 101:146)
+testing <- c(48:50, 98:100, 147:150)
+train_set <- iris[training, ]
+test_set <- iris[testing, ]
+
+pred_knn <- knn_predict(train_set[, -5], test_set[, -5], train_set$Species, k=1)
+pred_knn
+```
+
+Comparing to R version for accuracy's sake:
+
+```{r}
+
+a = knn_predict(train_set[, -5], test_set[, -5], train_set$Species, k=10)
+b = knn(train_set[,-5], test_set[,-5], train_set$Species, k=10)
+a==b
+```
+
+## c)
+
+I deviated from the instructions slightly - my `find_kcv` function returns both the errors and the optimal value because I wanted to plot the errors and see what was going on. I was surprised to see that the errors did not increase linearly but were all over the place.
+
+```{r cache=TRUE}
+find_kcv = function(X_train,y_train,ks=1:10,nfold=5){
+  
+  # empty frame to hold errors 
+  errors = data.frame(0,0)
+  
+  for (k in ks)  {
+  
+    results = c() 
+    
+    for (i in 1:nfold) {
+      
+      # create folds 
+      folds = createFolds(y_train,nfold)
+      
+      # test 
+      test_fold = X_train[folds[[i]],]
+      test_labels = y_train[folds[[i]]]
+      
+      # train 
+      train_fold = X_train[-folds[[i]],]
+      train_labels = y_train[-folds[[i]]]
+
+      # run knn 
+      pred_knn = knn_predict(train_fold, # no indexes here 
+                             test_fold, 
+                             train_labels, 
+                             k=k)
+      result = test_labels == pred_knn
+      results = c(results, result)
+    }
+    
+    val = 1 - mean(results) 
+    errors[k,] = c(k,val)
+  }
+  
+  # finding optimal k 
+  optimal_k = as.integer(errors[errors[,2] == min(errors[,2]),][1])
+  return_values = list(optimal_k, errors)
+  return(return_values)
+}
+
+result = find_kcv(train_set[, -5], train_set[, 5])
+cat("Optimal K Value :", result[[1]])
+```
+
+Plotting the result of validating over different K values:
+
+```{r}
+plot(result[[2]]$X0, result[[2]]$X0.1, type='l')
+```
+
+Out of curiosity, trying this again with a very large k, choosing optimal k, and plotting
+
+```{r cache=TRUE}
+large_k = find_kcv(train_set[, -5], train_set[, 5], ks=1:100)
+large_k[[1]]
+```
+
+```{r}
+plot(large_k[[2]]$X0, large_k[[2]]$X0.1, type='l',col='purple')
 ```
