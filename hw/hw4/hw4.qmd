@@ -141,6 +141,10 @@ $$
 
 # 4 (4.14 ISL)
 
+```{r}
+library(ISLR2)
+```
+
 ## a)
 
 ```{r}
@@ -354,7 +358,7 @@ a==b
 
 I deviated from the instructions slightly - my `find_kcv` function returns both the errors and the optimal value because I wanted to plot the errors and see what was going on. I was surprised to see that the errors did not increase linearly but were all over the place.
 
-```{r cache=TRUE}
+```{r}
 find_kcv = function(X_train,y_train,ks=1:10,nfold=5){
   
   # empty frame to hold errors 
@@ -391,13 +395,13 @@ find_kcv = function(X_train,y_train,ks=1:10,nfold=5){
   }
   
   # finding optimal k 
-  optimal_k = as.integer(errors[errors[,2] == min(errors[,2]),][1])
+  optimal_k = errors[errors[,2] == min(errors[,2]),][1]
   return_values = list(optimal_k, errors)
   return(return_values)
 }
 
 result = find_kcv(train_set[, -5], train_set[, 5])
-cat("Optimal K Value :", result[[1]])
+cat("Optimal K Value :", as.integer(result[[1]][1,1]))
 ```
 
 Plotting the result of validating over different K values:
@@ -406,11 +410,11 @@ Plotting the result of validating over different K values:
 plot(result[[2]]$X0, result[[2]]$X0.1, type='l')
 ```
 
-Out of curiosity, trying this again with a very large k, choosing optimal k, and plotting
+Out of curiosity, trying this again with a very large k, choosing optimal k, and plotting. Contrary to the small K, we can see below that the errors increase erratically as K grows and jump very high from 70-90.
 
-```{r cache=TRUE}
+```{r}
 large_k = find_kcv(train_set[, -5], train_set[, 5], ks=1:100)
-large_k[[1]]
+as.integer(large_k[[1]][1,1])
 ```
 
 ```{r}
